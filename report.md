@@ -46,6 +46,20 @@ We (will) then demonstrate our implementation of this approach on a set of bench
 
 # Background
 
+## Simulators
+
+Fabricating new hardware is a long and expensive process, so simulators like gem5 [@gem5] and SimpleScalar [@simplescalar] are used to evaluate new microarchitecture designs. By running benchmark suites, collections of programs that are representative of common computing workloads, performance comparisons can be made with existing designs.
+
+These simulators are both open-source, with their code and documentation available freely online. This makes it possible for researchers to extend them with novel hardware structures and examine their effect on overall system performance.
+
+Both SimpleScalar and gem5 provide different CPU models that span a spectrum between:
+
+- Fast functional simulators that emulate just the instruction set of a machine such as gem5’s `AtomicCPU` and SimpleScalar’s `sim-fast`, which can achieve simulation speeds of 6 MIPS[^mips] [@simplescalar, Table 1], whilst collecting information on the flow of execution.
+- Slower microarchitecture simulators that can track out-of-order scheduling, data hazards, functional units, cache hierarchies, etc. to produce accurate values for IPC[^ipc] when executing a given program. These cycle-accurate models include gem5’s O3 model and SimpleScalar’s `sim-outorder` which simulates at speeds of 0.3 MIPS.
+
+[^mips]: MIPS: Millions of Instructions Per Second
+[^ipc]: IPC: Instructions Per Cycle
+
 # Project Plan
 
 1. Improved background **(31st Jan)**
