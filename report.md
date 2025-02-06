@@ -62,7 +62,7 @@ Both SimpleScalar and gem5 provide different CPU models that span a spectrum bet
 
 ### Abbreviated Runs
 
-Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but running in functional model will not produce as accurate performance metric values. To alleviate this, we can run our functional simulator for a few hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, (7) observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour (8).
+Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but running in functional model will not produce as accurate performance metric values. To alleviate this, we can run our functional simulator for a few hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, [@fixme] observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour [@fixme].
 
 ## Sampled Simulation Techniques
 
@@ -74,7 +74,7 @@ For the reasons mentioned when discussing abbreviated runs, we want to simulate 
 - Periodic sampling techniques, such as SMARTS (see Section X.Y), where those sets are distributed regularly throughout the execution - the distance from one set to the next is predetermined
 - Representative, or targeted, sampling techniques such as SimPoint (see Section X.Y), which start by analysing the program, then pick the sets of instructions to sample that collectively represent the full behaviour of the program
 
-## Statistical Sampling
+### Statistical Sampling
 
 Both random and periodic sampling are statistical sampling techniques that build upon existing mathematical theory, such as the central limit theorem. The central limit theorem states that if sufficient independent observations are taken of a population (ie. more than thirty) with a finite variance $\sigma^2$ and mean $\mu$, then the distribution of the sample mean $\bar{x}$ approximates a normal distribution with mean $\mu$ and variance $\sigma^2 \over n$, irrespective of how the population is distributed.
 
@@ -89,6 +89,36 @@ Then the distribution of $\bar{x}$ approximates a normal distribution with the t
 $$\left[ \bar{x} - z_{1-c \over 2} {s \over \sqrt{n}}, \bar{x} + z_{1-c \over 2} {s \over \sqrt{n}} \right]$$
 
 Where the value $z_{1-c \over 2}$, the $(100c)$th percentile of the standard normal distribution, is taken from a precomputed table. The probability that the true mean value of the metric $\mu$ resides within this interval is $c$.
+
+## SMARTS
+
+SMARTS [@smartsPaper] uses the mathematical theory above to predetermine the size, $n$, of program samples based on a desired confidence level. This also requires the calculation of a coefficient of variation $V$:
+
+$$V = {\sigma \over \mu}$$
+
+This typically isn't known beforehand, so the SMARTS approach estimates its value using an initial large sample of size $n_\textnormal{init}$. If this initial sample's variance, $\hat{V}$, is insufficient for the target confidence level, then a new value for the size of the sample $n_\textnormal{tuned}$ can be calculated from $\hat{V}$.
+
+Once we know how large to make the sample, the SMARTS technique involves alternating between running a cycle-accurate and functional simulator model. The final metric result is calculated based on the $n$ sample phases. We also track the measured coefficient of variance $\hat{V}$ so we can compute the confidence bounds on our estimate. The value of $\hat{V}$ can also be reused to calculate the initial sample size for future experiments on the same program.
+
+### Warm-up
+
+One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that isn't maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle- accurate simulation, leading to an increase in cache misses and branch mispredictions that wouldn't occur in a complete execution.
+
+How best to solve this has been the subject of research. [@fixme] proposed a method where samples start being collected only after a context switch, under the assumption that at least for smaller caches, the cache will be flushed during the switch. [@fixme] suggests tracking the data that is needed for reconstructing architecture state during functional simulation, so that once the switch to cycle- accurate simulation is made, the processor structures can be filled back up in reverse. SMARTS approaches this problem in two ways: with detailed warming and with functional warming.
+
+Before each sample of size $n$, SMARTS has a period of detailed simulation of size $w$ that is not recorded, called detailed warming. This period fills the cache back up with fresh information so that the sample is executing in an environment as close to reality as possible. Picking a value for $w$ is tricky, as it adds a lot of cost to the overall simulation and the best value is highly dependant on the program being executed, so [@fixme] also introduced the concept of functional warming, a middle point between functional simulation and detailed warming. By augmenting the functional simulator model with the ability to maintain some of the microarchitecture state, notably the branch predictor and caches, $w$ can be reduced at the cost of a "small" slowdown in-between samples[^slowdown].
+
+The resulting sampling looks as follows:
+
+1. $n(k - 1) - w$ instructions are executed through functional warming
+2. $w$ instructions are executed through detailed warming to prepare the architecture state not maintained through functional warming
+3. $n$ instructions are executed in detailed mode with the cycle-accurate simulator in order to collect the measured performance metric
+
+[^slowdown]: The paper implemented a functional warming model that could operate at 55% the speed of the existing function simulation model.
+
+## SimPoint
+
+
 
 # Project Plan
 
