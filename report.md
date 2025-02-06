@@ -28,31 +28,47 @@ link-citations: true
 
 # Introduction
 
-This is a paragraph[^footnote].
+Modern computer architecture research often simulates how new designs would perform on existing benchmark suites like SPEC CPU 2017 [@speccpu2017]. This is a lengthy process, with single runs taking weeks or months, a cost at odds with the desire to test many different configurations of hardware parameters (cache sizes and associativities, register counts, store queue lengths, etc.) to accurately identify the Pareto front[^pareto]. As a result, much research has been done both on speeding up simulators and reducing the amount of instructions that must be simulated to get an accurate benchmark result.
 
-[^footnote]: It has a footnote as well
+[^pareto]: The Pareto front is the set of “efficient” configurations which cannot be changed to improve on one metric (power usage, instructions per cycle, etc.) without another metric worsening.
 
-This is a reference to some paper [@mapreduce]. It's followed by a code block with syntax highlighting:
+This has resulted in the development of SimPoint [@simpoint1], a tool for identifying the phases of execution present in a program using clustering algorithms and extracting samples representative of those phases, allowing for accurate estimation of metrics whilst executing a fraction of a full benchmark. The number of instructions that need simulating and error of a given set of SimPoints is influenced by several variables, including the size of those generated samples [@tracedoctor].
 
-```c
-int main(void) {
-    int x = 45;
-    int y = x * 56;
-    return (x - y) + 7;
-}
-```
+We (aim to) explore multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we (hope to) show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times. By extending the existing probability model for the SimPoint clustering approach, we aim to derive methods for determining these error rates efficiently whilst generating checkpoints.
 
-## Math
+[^bbvs]: Basic Block Vectors, for more see Section X.Y
 
-### Subheading
+Bayesian optimisation is an approach to determine the minimal value of a function with few evaluations of the function. Modern Bayesian optimisers [@hypermapper2] can work with multiple discrete or continuous parameters with constraints on their values. This makes them ideal for working with hardware parameters, where we want to limit exploration to designs that are feasible. They also have the ability for a user to pass in a prior distribution, representing preexisting knowledge about the problem space and where the optimal solution may exist that can be used to drive where we evaluate the function next.
 
-You can also do inline $x = y + 5$ and centered equations:
+By combining the SimPoint approach with Bayesian optimisation, we (aim to) construct a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations with confidence levels derived from our clustering probability model. By feeding this back into the Bayesian optimisation process, we can quickly assess the performance across the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
 
-$$\phi = \sum_{i=0}^n {n^2 \over n \log y}$$
-
-![An image of baked beans in tomato sauce](images/baked_beans.jpg)
+We (will) then demonstrate our implementation of this approach on a set of benchmarks, showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
 
 # Background
+
+1. Improved background (31st Jan)
+    - Get on repo, topics covered in more depth, diagrams improved
+    - Verify intuition on Simpoint limitations
+2. Minimal viable project (14th Feb)
+    - Hypermapper v2.0 being fed a prior from one smaller set of SimPoint samples and evaluating a function on a larger set of SimPoint samples
+    - Good chance to compare initial sampling methods (random, hypercube, etc.)
+    - Get R/tidyverse flow working in repo
+3. Move to Hypermapper v3.0, using multiple layers of priors (28th Feb)
+    - Sets of intervals of size n, 2n, 4n, . . .
+    - Variance calculated using result from (15)
+        - In the event this doesn’t work, or is too slow, build a heuristic
+4. Investigate simpoint splitting techniques (6th March)
+    - Build on variance result, collect variances for multiple sets in a single run
+    - Look into combining intervals (ie. same cluster for n and 2n, reuse checkpoint)
+5. I’m blocking off (7th-28st March) for exams & exams prep + 1 week holiday
+6. On return during summer term, finish anything unfinished from spring term,
+    - Combine above work into a usable tool
+        - Python
+    - Investigate questions posed as a result of 1-5
+    - Gather more data on a wider range of benchmarks, see Chapter 4
+    - Graphs, wonderful graphs
+7. Have first draft of final report done by (11th April)
+8. Have final report finished by (23rd May), leaving time for Paul/Jacky to go over it and some wiggle room for things to be delayed.
 
 # Project Plan
 
