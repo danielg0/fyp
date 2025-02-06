@@ -1,0 +1,5 @@
+# Hide compiled report
+out/
+
+# Hide images converted to pdfs for inclusion (eg. eps)
+images/*-converted-to.pdf
