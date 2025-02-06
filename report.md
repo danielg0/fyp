@@ -46,35 +46,39 @@ We (will) then demonstrate our implementation of this approach on a set of bench
 
 # Background
 
-1. Improved background (31st Jan)
+# Project Plan
+
+1. Improved background **(31st Jan)**
     - Get on repo, topics covered in more depth, diagrams improved
     - Verify intuition on Simpoint limitations
-2. Minimal viable project (14th Feb)
+2. Minimal viable project **(14th Feb)**
     - Hypermapper v2.0 being fed a prior from one smaller set of SimPoint samples and evaluating a function on a larger set of SimPoint samples
     - Good chance to compare initial sampling methods (random, hypercube, etc.)
     - Get R/tidyverse flow working in repo
-3. Move to Hypermapper v3.0, using multiple layers of priors (28th Feb)
+3. Move to Hypermapper v3.0, using multiple layers of priors **(28th Feb)**
     - Sets of intervals of size n, 2n, 4n, . . .
-    - Variance calculated using result from (15)
+    - Variance calculated using result from [@earlyVarianceSimpoints]
         - In the event this doesn’t work, or is too slow, build a heuristic
-4. Investigate simpoint splitting techniques (6th March)
+4. Investigate simpoint splitting techniques **(6th March)**
     - Build on variance result, collect variances for multiple sets in a single run
     - Look into combining intervals (ie. same cluster for n and 2n, reuse checkpoint)
-5. I’m blocking off (7th-28st March) for exams & exams prep + 1 week holiday
+5. I’m blocking off **(7th-28st March)** for exams & exams prep + 1 week holiday
 6. On return during summer term, finish anything unfinished from spring term,
     - Combine above work into a usable tool
         - Python
     - Investigate questions posed as a result of 1-5
     - Gather more data on a wider range of benchmarks, see Chapter 4
     - Graphs, wonderful graphs
-7. Have first draft of final report done by (11th April)
-8. Have final report finished by (23rd May), leaving time for Paul/Jacky to go over it and some wiggle room for things to be delayed.
-
-# Project Plan
+7. Have first draft of final report done by **(11th April)**
+8. Have final report finished by **(23rd May)**, leaving time for Paul/Jacky to go over it and some wiggle room for things to be delayed.
 
 # Evaluation Plan
 
 # Ethical Issues
+
+If we go down the route of assessing the usability of the final tool through questionnaires of potential users, considerations will have to be made for anonymisation of recipients, the secure storage of replies and fulfillment of our requirements under GDPR.
+
+No other ethical issues exist.
 
 # Bibliography {.unnumbered}
 
