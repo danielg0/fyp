@@ -22,6 +22,9 @@ header-includes:
     \usepackage{amsmath}
     \usepackage{graphicx}
     \usepackage[colorinlistoftodos]{todonotes}
+
+    %% Multicolumn sections
+    \usepackage{multicol}
     ```
 link-citations: true
 ---
@@ -118,7 +121,67 @@ The resulting sampling looks as follows:
 
 ## SimPoint
 
+An alternative approach proposed by [@simpoint1] s based on the insight that many programs have repeated phases of similar behaviour. By identifying these phases and simulating samples of the program that exhibit those phases’ behaviours, we can produce good estimates for metric values over the whole runtime of the program. The behaviour of a given section of a program can be characterised by the instructions it executes [@fixme], and so the SimPoint approach identifies phases by considering basic blocks, sections of the program with a single entry and exit point that contain no control flow. For example, the following C function to find the maximal element of an array has 6 basic blocks, annotated 1-6 in the x86 assembly output on the right:
 
+```{=latex}
+\begin{multicols}{2}
+```
+
+```c
+int maxArr(int *arr, int len) {
+    if (len <= 0)
+        return -1;
+    
+    int max = arr[0];
+    for (int i = 1; i < len; i++)
+        if (arr[i] > max)
+            max = arr[i];
+    return max;
+}
+```
+
+[_Compiled with GCC 14.2 using Godbolt_](https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:20,endLineNumber:15,positionColumn:20,positionLineNumber:15,selectionStartColumn:20,selectionStartLineNumber:15,startColumn:20,startLineNumber:15),source:'%23include+%3Cstdio.h%3E%0A%0Aint+maxArr(int+*arr,+int+len)+%7B%0A++++if+(len+%3C%3D+0)%0A++++++++return+-1%3B%0A++++%0A++++int+max+%3D+arr%5B0%5D%3B%0A++++for+(int+i+%3D+1%3B+i+%3C+len%3B+i%2B%2B)%0A++++++++if+(arr%5Bi%5D+%3E+max)%0A++++++++++++max+%3D+arr%5Bi%5D%3B%0A++++return+max%3B%0A%7D%0A%0Aint+main(void)+%7B%0A++++int+a%5B4%5D+%3D+%7B-17,+34,+34,+34%7D%3B%0A++++printf(%22%25d%5Cn%22,+maxArr(a,+2))%3B%0A++++return+0%3B%0A%7D'),l:'5',n:'0',o:'C%2B%2B+source+%231',t:'0')),k:33.333333333333336,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((h:compiler,i:(compiler:g142,filters:(b:'0',binary:'1',binaryObject:'1',commentOnly:'0',debugCalls:'1',demangle:'0',directives:'0',execute:'0',intel:'0',libraryCode:'0',trim:'1',verboseDemangling:'0'),flagsViewOpen:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'-O',overrides:!(),selection:(endColumn:17,endLineNumber:9,positionColumn:17,positionLineNumber:9,selectionStartColumn:17,selectionStartLineNumber:9,startColumn:17,startLineNumber:9),source:1),l:'5',n:'0',o:'+x86-64+gcc+14.2+(Editor+%231)',t:'0')),k:33.333333333333336,l:'4',n:'0',o:'',s:0,t:'0'),(g:!((h:output,i:(compilerName:'x86-64+gcc+14.2',editorid:1,fontScale:14,fontUsePx:'0',j:1,wrap:'1'),l:'5',n:'0',o:'Output+of+x86-64+gcc+14.2+(Compiler+%231)',t:'0')),k:33.33333333333333,l:'4',n:'0',o:'',s:0,t:'0')),l:'2',n:'0',o:'',t:'0')),version:4)
+
+```{=latex}
+\columnbreak
+```
+
+```asm
+maxArr(int*, int):
+        test    esi, esi                ; --- BB #1
+        jle     .L4                     ; __|
+        mov     edx, DWORD PTR [rdi]    ; --- BB #2
+        cmp     esi, 1                  ;   |
+        jle     .L1                     ; __|
+        lea     rax, [rdi+4]            ; --- BB #3
+        lea     ecx, [rsi-2]            ;   |
+        lea     rsi, [rdi+8+rcx*4]      ; __|
+.L3:
+        mov     ecx, DWORD PTR [rax]    ; --- BB #4
+        cmp     edx, ecx                ;   |
+        cmovl   edx, ecx                ;   |
+        add     rax, 4                  ;   |
+        cmp     rax, rsi                ;   |
+        jne     .L3                     ; __|
+.L1:
+        mov     eax, edx                ; --- BB #5
+        ret                             ; __|
+.L4:
+        mov     edx, -1                 ; --- BB #6
+        jmp     .L1                     ; __|
+```
+
+```{=latex}
+\end{multicols}
+```
+
+By tracking which basic blocks are executed in an interval we get a "fingerprint" for its behaviour. If two intervals execute the same or similar basic blocks, they executed similar instructions and so the measured value of metrics should also be similar. More formally, we build Basic Block Vectors (BBVs) at regular intervals, typically on the order of millions of instructions, during execution of the program. A BBV is a one-dimensional vector with an entry for each basic block present in the entire program, holding the number of times during the interval an instruction from that basic block was executed. The BBV stores the number of instructions executed from each basic block, rather than the number of times each basic block was executed, so that short basic blocks are not overrepresented when they are executed many times, as each run constitutes less of the overall execution than a run of a longer basic block.
+
+We can treat all the collected BBVs as points in an $n$-dimensional space, where $n$ is the number of basic blocks in the program. Then, the Euclidean distance between two points can be used as a metric for their similarity, calculated as follows for two BBVs $(a_1, \ldots, a_n)$ and $(b_1, \ldots, b_n)$:
+
+$$\sqrt { \sum_{i=1}^n (a_i - b_i)^2 }$$
+
+To identify the phases of the program from the BBVs, we want to find groups of points in our space that are close together, and so have similar program behaviour. This is a clustering problem which can be solved using algorithms from the field of machine learning. The original implementation, [@fixme], used k-means clustering, whereas [@fixme] proposed using multinomial clustering instead. These are briefly discussed below.
 
 # Project Plan
 
