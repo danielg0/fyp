@@ -223,6 +223,20 @@ The process of $k$-means clustering is fast, however it's not guaranteed to find
 
 ...
 
+### Approach Summary
+
+![A summary of the original SimPoint [@simpoint1] process](diagrams/simpoint-overview.drawio.svg)
+
+Figure X.Y is labelled as follows:
+
+1. Simulate the entire program on a simplified CPU, tracking the basic blocks being executed in order to build BBVs
+2. Represent those vectors as points in a basic block space
+3. Perform a random linear map on the set of BBVs to reduce the dimensionality of the data
+4. Cluster the BBVs, identifying the phases in the program
+5. Pick a BBV closest to the centre of each cluster to represent it, recording the proportion of BBVs in that cluster
+
+To produce a final performance metric, do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. Then, we weight the performance metrics of each phase by the proportion of BBVs in that phase’s cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
+
 # Project Plan
 
 1. Improved background **(31st Jan)**
