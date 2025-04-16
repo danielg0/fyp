@@ -1,0 +1,3 @@
+export GEM5=~/Builds/Git/gem5/build/X86/gem5.opt
+export SIMPOINT=~/Builds/Local/simpoint/bin/simpoint
+export COREMARK=~/Builds/Git/coremark-pro/builds/linux64/gcc64/bin/
