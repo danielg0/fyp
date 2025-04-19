@@ -53,7 +53,7 @@ We (will) then demonstrate our implementation of this approach on a set of bench
 
 Fabricating new hardware is a long and expensive process, so simulators like gem5 [@gem5] and SimpleScalar [@simplescalar] are used to evaluate new microarchitecture designs. By running benchmark suites, collections of programs that are representative of common computing workloads, performance comparisons can be made with existing designs.
 
-These simulators are both open-source, with their code and documentation available freely online. This makes it possible for researchers to extend them with novel hardware structures and examine their effect on overall system performance.
+These simulators are both open-source, with their code and documentation available freely online. This makes it possible for researchers to extend them with novel hardware structures and examine the effects of these extensions on overall system performance.
 
 Both SimpleScalar and gem5 provide different CPU models that span a spectrum between:
 
@@ -65,13 +65,13 @@ Both SimpleScalar and gem5 provide different CPU models that span a spectrum bet
 
 ### Abbreviated Runs
 
-Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but running in functional model will not produce as accurate performance metric values. To alleviate this, we can run our functional simulator for a few hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, [@fixme] observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour [@fixme].
+Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but simulating with a functional model will not produce as accurate performance metric values. To alleviate this, we can run our functional simulator for a few hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, [@fixme] observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour [@fixme].
 
 ## Sampled Simulation Techniques
 
 ![Potential sets of samples for the different techniques, based on (X Fig 6.2)](diagrams/sim-sample-techniques.drawio.svg)
 
-For the reasons mentioned when discussing abbreviated runs, we want to simulate a subset of a program's complete execution. There are three main approaches for sampling a simulation of a program (9 Ch 6), that can produce results that are representative of a programs varying behaviour:
+In order to achieve a balance between the accuracy of a microarchitectural simulation and speed of a functional model, we can run a cycle-accurate simulator on a subset of a program's complete execution. There are three main approaches to sampling a program (9 Ch 6) that can produce results that are representative of a programs varying behaviour:
 
 - Random sampling, where we distribute the sets of instructions that we sample randomly throughout the entire execution
 - Periodic sampling techniques, such as SMARTS (see Section X.Y), where those sets are distributed regularly throughout the execution - the distance from one set to the next is predetermined
