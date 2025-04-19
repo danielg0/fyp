@@ -49,7 +49,7 @@ for scale in args.scaleto:
     instr_left.append(scale)
     next_bbv.append({})
 
-outfiles = [open(str(args.outdir) + "/interval_" + str(n) + ".bbv", "w") for n in args.scaleto]
+outfiles = [open(str(args.outdir) + "/" + str(n) + ".bb", "w") for n in args.scaleto]
 
 for bbv in args.infile.readlines():
     if not bbv.strip().startswith('T'):
