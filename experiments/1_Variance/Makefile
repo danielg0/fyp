@@ -1,6 +1,6 @@
-GEM5 = ~/Builds/Git/gem5/build/X86/gem5.opt
-GEM5_CONFIG_FILE = ~/Builds/Git/gem5/configs/deprecated/example/se.py
-SIMPOINT = ~/Builds/Local/simpoint/bin/simpoint
+GEM5 = ~/gem5/gem5/build/X86/gem5.opt
+GEM5_CONFIG_FILE = ~/gem5/gem5/configs/deprecated/example/se.py
+SIMPOINT = ~/simpoint/bin/simpoint
 
 BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha zip
 COREMARK_ARGS = -v0 -c1 -w1 -i10
