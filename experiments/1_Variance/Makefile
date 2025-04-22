@@ -10,6 +10,13 @@ SCALED_BBV_SIZES = 1000 2000 4000 8000 16000 32000
 
 GEM5_MEMORY = --mem-size=8GiB --caches --l2cache --l1d_size=64KiB --l1i_size=64KiB
 
+SIMPOINT_OPTIONS = -maxK 30
+
+# trick to convert x y z to x,y,z
+empty:=
+space:=$(empty) $(empty)
+comma:=,
+
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=simpoints/%/scaled.done)
 
@@ -17,14 +24,17 @@ experiment: $(BENCHMARKS:%=simpoints/%/scaled.done)
 clean:
 	rm -rf profiling/ simpoints/
 
+# collecting initial bbvs
+profiled_bbvs: $(BENCHMARKS:%=profiling/%/simpoint.bb.gz)
 profiling/%/simpoint.bb.gz: bin/%
 	mkdir -p profiling/$*
 	$(GEM5) --outdir=profiling/$* $(GEM5_CONFIG_FILE) \
 		-c $< --options='$(COREMARK_ARGS)' \
 		--simpoint-profile --simpoint-interval $(PROFILED_BBV_SIZE) \
-		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY)
+		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
+		2> profiling/$*/err.log > profiling/$*/log.log
 
-
+# scaling profiled bbv up to greater interval sizes
 simpoints/%/scaled.done: profiling/%/simpoint.bb.gz
 	mkdir -p simpoints/$*
 	gunzip $< -c | ./supersample.py --outdir simpoints/$* \
