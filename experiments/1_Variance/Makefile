@@ -2,13 +2,15 @@ GEM5 = ~/gem5/gem5/build/X86/gem5.opt
 GEM5_CONFIG_FILE = ~/gem5/gem5/configs/deprecated/example/se.py
 SIMPOINT = ~/simpoint/bin/simpoint
 
-BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha zip
+BENCHMARKS = cjpeg#core linear loops nnet parser radix2 sha zip
 COREMARK_ARGS = -v0 -c1 -w1 -i10
 
 PROFILED_BBV_SIZE = 1000
 SCALED_BBV_SIZES = 1000 2000 4000 8000 16000 32000
 
 GEM5_MEMORY = --mem-size=8GiB --caches --l2cache --l1d_size=64KiB --l1i_size=64KiB
+# TODO: specify this properly
+WARMUP = 1000
 
 SIMPOINT_OPTIONS = -maxK 30
 # size of simpoint groups used to calculate variance
@@ -21,12 +23,12 @@ comma:=,
 
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=%.experiment)
-%.experiment: $(SCALED_BBV_SIZES:%=simpoints/\%/%.points)
+%.experiment: $(SCALED_BBV_SIZES:%=checkpoints/\%/%/generated)
 	echo Experiment $* done
 
 .PHONY: clean
 clean:
-	rm -rf profiling/ simpoints/
+	rm -rf profiling/ simpoints/ checkpoints/
 
 # collecting initial bbvs
 .PRECIOUS: profiling/%/simpoint.bb.gz
@@ -59,3 +61,16 @@ simpoints/%.labels simpoints/%.weights: simpoints/%.bb
 .PRECIOUS: simpoints/%.points
 simpoints/%.points: simpoints/%.labels
 	./collectLabels -inLabels $< -outPoints $@ -N $(SIMPOINT_N)
+
+# generate checkpoints from simpoints
+# % will be of the form benchmark/interval so $(*D) and $(*F) can be used to
+# extract them
+.PRECIOUS: checkpoints/%/generated
+checkpoints/%/generated: simpoints/%.points
+	mkdir -p $(@D)
+	$(GEM5) --outdir $(@D) $(GEM5_CONFIG_FILE) \
+		-c bin/$(*D) --options='$(COREMARK_ARGS)' \
+		--take-simpoint-checkpoint=$<,,$(*F),$(WARMUP) \
+		--cpu-type=X86O3CPU $(GEM5_MEMORY) \
+		2> $(@D)/err.log > $(@D)/log.log
+	touch $@
