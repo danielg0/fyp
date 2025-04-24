@@ -1,4 +1,4 @@
-#!/bin/python
+#!/bin/python3
 
 # collect the N closest simpoints to a centre for each group
 
