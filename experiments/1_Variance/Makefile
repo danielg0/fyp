@@ -11,6 +11,8 @@ SCALED_BBV_SIZES = 1000 2000 4000 8000 16000 32000
 GEM5_MEMORY = --mem-size=8GiB --caches --l2cache --l1d_size=64KiB --l1i_size=64KiB
 
 SIMPOINT_OPTIONS = -maxK 30
+# size of simpoint groups used to calculate variance
+SIMPOINT_N = 10
 
 # trick to convert x y z to x,y,z
 empty:=
@@ -19,7 +21,7 @@ comma:=,
 
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=%.experiment)
-%.experiment: $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb)
+%.experiment: $(SCALED_BBV_SIZES:%=simpoints/\%/%.points)
 	echo Experiment $* done
 
 .PHONY: clean
@@ -44,3 +46,16 @@ $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb): profiling/%/simpoint.bb.gz
 	mkdir -p simpoints/$*
 	gunzip $< -c | ./supersample.py --outdir simpoints/$* \
 		--insize $(PROFILED_BBV_SIZE) --scaleto $(SCALED_BBV_SIZES)
+
+# doing simpoint processing on points, producing clustered bbvs and distances to
+# their cluster's centre
+.PRECIOUS: simpoints/%.labels simpoints/%.weights
+simpoints/%.labels simpoints/%.weights: simpoints/%.bb
+	$(SIMPOINT) -loadFVFile $< -saveLabels simpoints/$*.labels \
+		-saveSimpointWeights simpoints/$*.weights $(SIMPOINT_OPTIONS) \
+		> simpoints/%.log 2>&1
+
+# select the ten closest points for each
+.PRECIOUS: simpoints/%.points
+simpoints/%.points: simpoints/%.labels
+	./collectLabels -inLabels $< -outPoints $@ -N $(SIMPOINT_N)
