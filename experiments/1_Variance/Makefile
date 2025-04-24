@@ -31,20 +31,20 @@ clean:
 # collecting initial bbvs
 .PRECIOUS: profiling/%/simpoint.bb.gz
 profiling/%/simpoint.bb.gz: bin/%
-	mkdir -p profiling/$*
-	$(GEM5) --outdir=profiling/$* $(GEM5_CONFIG_FILE) \
+	mkdir -p $(@D)
+	$(GEM5) --outdir=$(@D) $(GEM5_CONFIG_FILE) \
 		-c $< --options='$(COREMARK_ARGS)' \
 		--simpoint-profile --simpoint-interval $(PROFILED_BBV_SIZE) \
-		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
-		2> profiling/$*/err.log > profiling/$*/log.log
+		--cpu-type=X86AtomicSimpleCPU $(GEM5_MEMORY) \
+		2> $(@D)/err.log > $(@D)/log.log
 
 # scaling profiled bbv up to greater interval sizes - from a single profiled
 # profiling/b/simpoint.bb.gz for some benchmark b, we produce a simpoints/b/n.bb
 # for each scaled bbv size n
 .PRECIOUS: $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb)
 $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb): profiling/%/simpoint.bb.gz
-	mkdir -p simpoints/$*
-	gunzip $< -c | ./supersample.py --outdir simpoints/$* \
+	mkdir -p $(@D)
+	gunzip $< -c | ./supersample.py --outdir $(@D) \
 		--insize $(PROFILED_BBV_SIZE) --scaleto $(SCALED_BBV_SIZES)
 
 # doing simpoint processing on points, producing clustered bbvs and distances to
