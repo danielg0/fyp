@@ -27,7 +27,7 @@ clean:
 	rm -rf profiling/ simpoints/
 
 # collecting initial bbvs
-profiled_bbvs: $(BENCHMARKS:%=profiling/%/simpoint.bb.gz)
+.PRECIOUS: profiling/%/simpoint.bb.gz
 profiling/%/simpoint.bb.gz: bin/%
 	mkdir -p profiling/$*
 	$(GEM5) --outdir=profiling/$* $(GEM5_CONFIG_FILE) \
@@ -39,6 +39,7 @@ profiling/%/simpoint.bb.gz: bin/%
 # scaling profiled bbv up to greater interval sizes - from a single profiled
 # profiling/b/simpoint.bb.gz for some benchmark b, we produce a simpoints/b/n.bb
 # for each scaled bbv size n
+.PRECIOUS: $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb)
 $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb): profiling/%/simpoint.bb.gz
 	mkdir -p simpoints/$*
 	gunzip $< -c | ./supersample.py --outdir simpoints/$* \
