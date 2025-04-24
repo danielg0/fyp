@@ -22,7 +22,13 @@ parser.add_argument(
 parser.add_argument(
         "-inLabels",
         type = argparse.FileType("r"),
-        default = sys.stdin,
+        required = True,
+)
+
+parser.add_argument(
+        "-inWeights",
+        type = argparse.FileType("r"),
+        required = True,
 )
 
 parser.add_argument(
@@ -31,9 +37,29 @@ parser.add_argument(
         required = True,
 )
 
+parser.add_argument(
+        "-outWeights",
+        type = argparse.FileType("w"),
+        required = True,
+)
+
 args = parser.parse_args()
+# map of cluster to its weight
+weights = {}
 # map of arrays: cluster -> [(distance, bbv index)]
 points = {}
+
+weight = re.compile(r"^([+\-e.0-9]+) (\d+)$")
+# gather cluster weights
+for line in args.inWeights.readlines():
+    match = weight.match(line)
+    if match is None:
+        print("Error: couldn't parse weight '" + line + "'")
+        sys.exit(-1)
+    else:
+        weighting = float(match.group(1))
+        cluster = int(match.group(2))
+        weights[cluster] = weighting
 
 # regex to match a integer and float (might be of form 0.43e+34)
 label = re.compile(r"^(\d+) ([+\-e.0-9]+)$")
@@ -59,6 +85,11 @@ for key in sorted(points):
     sorted_points = sorted(points[key])
     if len(sorted_points) < args.N:
         print("Warning: Less than N points for cluster " + str(key))
-    for i in range(min(args.N, len(sorted_points))):
+
+    candidates = min(args.N, len(sorted_points))
+    point_weight = weights[key] / candidates
+    for i in range(candidates):
         distance, index = sorted_points[i]
-        args.outPoints.write(str(index) + " " + str(key) + "." + str(i) + "\n")
+        point_name = str(key) + "." + str(i)
+        args.outPoints.write(str(index) + " " + point_name + "\n")
+        args.outWeights.write(str(point_weight) + " " + point_name + "\n")

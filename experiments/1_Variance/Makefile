@@ -58,19 +58,20 @@ simpoints/%.labels simpoints/%.weights: simpoints/%.bb
 		> simpoints/$*.log 2>&1
 
 # select the ten closest points for each
-.PRECIOUS: simpoints/%.points
-simpoints/%.points: simpoints/%.labels
-	./collectLabels.py -inLabels $< -outPoints $@ -N $(SIMPOINT_N)
+.PRECIOUS: simpoints/%.points simpoints/%.pweights
+simpoints/%.points simpoints/%.pweights: simpoints/%.labels simpoints/%.weights
+	./collectLabels.py -inLabels $< -outPoints $@ -N $(SIMPOINT_N) \
+		-inWeights simpoints/$*.weights -outWeights simpoints/$*.pweights
 
 # generate checkpoints from simpoints
 # % will be of the form benchmark/interval so $(*D) and $(*F) can be used to
 # extract them
 .PRECIOUS: checkpoints/%/generated
-checkpoints/%/generated: simpoints/%.points
+checkpoints/%/generated: simpoints/%.points simpoints/%.pweights
 	mkdir -p $(@D)
 	$(GEM5) --outdir $(@D) $(GEM5_CONFIG_FILE) \
 		-c bin/$(*D) --options='$(COREMARK_ARGS)' \
-		--take-simpoint-checkpoint=$<,,$(*F),$(WARMUP) \
+		--take-simpoint-checkpoint=$<,simpoints/$*.pweights,$(*F),$(WARMUP) \
 		--cpu-type=X86O3CPU $(GEM5_MEMORY) \
 		2> $(@D)/err.log > $(@D)/log.log
 	touch $@
