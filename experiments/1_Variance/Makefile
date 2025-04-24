@@ -18,7 +18,9 @@ space:=$(empty) $(empty)
 comma:=,
 
 .PHONY: experiment
-experiment: $(BENCHMARKS:%=simpoints/%/scaled.done)
+experiment: $(BENCHMARKS:%=%.experiment)
+%.experiment: $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb)
+	echo Experiment $* done
 
 .PHONY: clean
 clean:
@@ -34,9 +36,10 @@ profiling/%/simpoint.bb.gz: bin/%
 		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
 		2> profiling/$*/err.log > profiling/$*/log.log
 
-# scaling profiled bbv up to greater interval sizes
-simpoints/%/scaled.done: profiling/%/simpoint.bb.gz
+# scaling profiled bbv up to greater interval sizes - from a single profiled
+# profiling/b/simpoint.bb.gz for some benchmark b, we produce a simpoints/b/n.bb
+# for each scaled bbv size n
+$(SCALED_BBV_SIZES:%=simpoints/\%/%.bb): profiling/%/simpoint.bb.gz
 	mkdir -p simpoints/$*
 	gunzip $< -c | ./supersample.py --outdir simpoints/$* \
 		--insize $(PROFILED_BBV_SIZE) --scaleto $(SCALED_BBV_SIZES)
-	touch simpoints/$*/scaled.done
