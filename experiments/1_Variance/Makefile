@@ -60,7 +60,7 @@ simpoints/%.labels simpoints/%.weights: simpoints/%.bb
 # select the ten closest points for each
 .PRECIOUS: simpoints/%.points
 simpoints/%.points: simpoints/%.labels
-	./collectLabels -inLabels $< -outPoints $@ -N $(SIMPOINT_N)
+	./collectLabels.py -inLabels $< -outPoints $@ -N $(SIMPOINT_N)
 
 # generate checkpoints from simpoints
 # % will be of the form benchmark/interval so $(*D) and $(*F) can be used to
