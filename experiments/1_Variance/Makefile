@@ -2,7 +2,7 @@ GEM5 = ~/gem5/gem5/build/X86/gem5.opt
 GEM5_CONFIG_FILE = ~/gem5/gem5/configs/deprecated/example/se.py
 SIMPOINT = ~/simpoint/bin/simpoint
 
-BENCHMARKS = cjpeg#core linear loops nnet parser radix2 sha zip
+BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha zip
 COREMARK_ARGS = -v0 -c1 -w1 -i10
 
 PROFILED_BBV_SIZE = 1000
@@ -55,7 +55,7 @@ $(SCALED_BBV_SIZES:%=simpoints/\%/%.bb): profiling/%/simpoint.bb.gz
 simpoints/%.labels simpoints/%.weights: simpoints/%.bb
 	$(SIMPOINT) -loadFVFile $< -saveLabels simpoints/$*.labels \
 		-saveSimpointWeights simpoints/$*.weights $(SIMPOINT_OPTIONS) \
-		> simpoints/%.log 2>&1
+		> simpoints/$*.log 2>&1
 
 # select the ten closest points for each
 .PRECIOUS: simpoints/%.points
