@@ -23,7 +23,7 @@ comma:=,
 
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=%.experiment)
-%.experiment: $(SCALED_BBV_SIZES:%=checkpoints/\%/%/generated)
+%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated)
 	echo Experiment $* done
 
 .PHONY: clean
@@ -74,4 +74,16 @@ checkpoints/%/generated: simpoints/%.points simpoints/%.pweights
 		--take-simpoint-checkpoint=$<,simpoints/$*.pweights,$(*F),$(WARMUP) \
 		--cpu-type=X86O3CPU $(GEM5_MEMORY) \
 		2> $(@D)/err.log > $(@D)/log.log
+	touch $@
+
+# run generated checkpoints
+# script that parses the .points file and runs all the corresponding checkpoints
+.PRECIOUS: results/%/generated
+results/%/generated: simpoints/%.points checkpoints/%/generated
+	mkdir -p $(@D)
+	./runCheckpoints.py --inPoints $< --checkpointdir checkpoints/$* \
+		--outdir $(@D) --warmup $(WARMUP) --width $(*F) \
+		-- $(GEM5) $(GEM5_CONFIG_FILE) \
+			-c bin/$(*D) --options='$(COREMARK_ARGS)' \
+			--cpu-type=X86O3CPU $(GEM5_MEMORY)
 	touch $@
