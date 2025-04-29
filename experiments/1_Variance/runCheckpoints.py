@@ -81,16 +81,27 @@ for simpoint in args.inPoints.readlines():
         checkpoint = search[0]
 
         # extract checkpoint id
+        # make sure to add one
         match = simpoint_id.match(checkpoint.name)
         if match is None:
             print("Couldn't find id in '" + checkpoint.name + "'")
             sys.exit(-1)
         else:
-            simpoints.append((cluster, index, match.group(1)))
+            cpt_id = str(1 + int(match.group(1)))
+
+            # checkpoints with no warmup won't work, handle them manually
+            no_warmup = (offset * args.width) < args.warmup
+
+            simpoints.append((cluster, index, cpt_id, no_warmup))
 
 # method to measure a metric given a (cluster, index, cpt) tuple
 def run_checkpoint(config):
-    cluster, index, cpt = config
+    # increase oom score
+    oom_score = open(f"/proc/{os.getpid()}/oom_score_adj", "w")
+    oom_score.write("500")
+    oom_score.close()
+
+    cluster, index, cpt, no_warmup = config
 
     # create directory for output
     resultdir = args.outdir / cluster / index
@@ -100,11 +111,18 @@ def run_checkpoint(config):
     command = list(tuple(args.gem5cmd))
     command.insert(1, "--outdir")
     command.insert(2, str(resultdir))
-    command.extend([
-        "--restore-simpoint-checkpoint",
-        "-r", cpt,
-        "--checkpoint-dir", str(args.checkpointdir),
-    ])
+    # if there's no warmup, run from the beginning manually as gem5 breaks on an
+    # empty warmup
+    if no_warmup:
+        command.extend([
+            "--maxinsts", str(args.width),
+        ])
+    else:
+        command.extend([
+            "--restore-simpoint-checkpoint",
+            "-r", cpt,
+            "--checkpoint-dir", str(args.checkpointdir),
+        ])
 
     with open(resultdir / "log.log", "w") as log:
         with open(resultdir / "err.log", "w") as err:
@@ -115,7 +133,6 @@ def run_checkpoint(config):
 
             if status != 0:
                 print("Exited with status code " + str(status))
-                sys.exit(-1)
 
 # create a set of jobs to measure metrics for each checkpoint
 pool = multiprocessing.Pool(1)
