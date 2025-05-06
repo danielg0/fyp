@@ -1,0 +1,9 @@
+benchmark,real_cpi
+cjpeg,2.479850
+core,2.693292
+linear,0.792146
+loops,1.134666
+nnet,2.367014
+parser,0.349580
+radix2,0.704826
+sha,0.644259

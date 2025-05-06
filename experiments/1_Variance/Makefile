@@ -23,7 +23,7 @@ comma:=,
 
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=%.experiment)
-%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated)
+%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated) baseline/%/generated
 	echo Experiment $* done
 
 .PHONY: clean
@@ -86,4 +86,15 @@ results/%/generated: simpoints/%.points checkpoints/%/generated
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
 			-c bin/$(*D) --options='$(COREMARK_ARGS)' \
 			--cpu-type=X86O3CPU $(GEM5_MEMORY)
+	touch $@
+
+# run baseline simulations
+# full simulation to produce actual metrics for comparison
+.PRECIOUS: baseline/%/generated
+baseline/%/generated: bin/%
+	mkdir -p $(@D)
+	$(GEM5) --outdir=$(@D) $(GEM5_CONFIG_FILE) \
+		-c $< --options='$(COREMARK_ARGS)' \
+		--cpu-type=X86O3CPU $(GEM5_MEMORY) \
+		2> $(@D)/err.log > $(@D)/log.log
 	touch $@
