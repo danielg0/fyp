@@ -271,6 +271,12 @@ If we go down the route of assessing the usability of the final tool through que
 
 No other ethical issues exist.
 
+# Images
+
+<!-- ![Test plot](./experiments/1_Variance/Rplots.tex) -->
+
+![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
+
 # Bibliography {.unnumbered}
 
 ::: {#refs}
