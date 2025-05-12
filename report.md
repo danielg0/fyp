@@ -237,6 +237,33 @@ Figure X.Y is labelled as follows:
 
 To produce a final performance metric, do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. Then, we weight the performance metrics of each phase by the proportion of BBVs in that phase’s cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
 
+# Generating Basic Block Vectors (BBVs)
+
+The first step in building multiple sets of simpoints is collecting an array of basic block vectors (BBVs) [see Section X.Y] for each simulation interval $i_1, i_2, \ldots, i_N$ of interest. The gem5 simulator [@gem5] has the ability to generate BBVs from a functional simulation of a program for a single given target interval. We could repeat this simulation for each interval we want a set of simpoints for, requiring time linear with respect to $N$. This entails inefficiently simulating an identical program multiple times - we can instead take an existing BBV array and "super-sample" it to construct a BBV of a greater interval or "sub-sample" it to produce one of a smaller interval, without additional simulation. In this chapter, we will discuss methods for sub- and super-sampling BBV arrays and their trade offs. 
+
+As a reminder, a BBV expresses the behaviour of a single interval in a program as a vector storing the number instructions executed in that interval from each basic block in the entire program. A sequence of BBVs then represents the behaviour of an entire program where the first represents the first interval's worth of instructions, the second the behaviour of the instructions in the second interval, etc. forming an array of BBVs.
+
+## Super-sampling
+
+Given two BBVs of size $N$, $B^N_a$ and $B^N_b$, the sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an instruction flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from $a$ of size $2N$, $B^{2N}_a$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in figure X.
+
+Our approach to generate a set of BBV arrays given a set of output intervals, $is$ is:
+
+1. Pick the smallest interval in $is$, $i_0$ as the *input interval size*
+2. Create an empty BBV array for each other interval in $is$
+3. Run a simulation of the program to generate an initial set of BBVs of interval size $i_0$
+4. Iterate over each BBV in the generated array, tracking for each interval in $is$ other than $i_0$ a mutable BBV and an instruction counter. For each BBV:
+    a. Add this iteration's BBV to each mutable BBV and add $i_0$ to each instruction counter
+    b. For each interval whose instruction counter equals its interval size, append its mutable BBV to its BBV array and reset that intervals counter and mutable BBV
+
+In the optimal configuration where the input interval size is a factor of every we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval. We also take less time to do so, requiring a constant amount of simulation time with respect to the number of target intervals.
+
+## Sub-sampling
+
+# Future Work
+
+- Incorporating BBV generation into Gem5
+
 # Project Plan
 
 1. Improved background **(31st Jan)**
