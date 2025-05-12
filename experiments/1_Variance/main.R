@@ -15,3 +15,15 @@ variance_by_interval <- ggplot(variance, aes(x = as.factor(interval), y = cpi_va
 	theme_few() + scale_colour_few()
 
 ggsave("plots/variance_by_interval.svg", width=10, height=5)
+
+# calculate weighted average
+selected <- filter(data, index == 0)
+weights <- read_csv("simpoints/weights.csv")
+estimates <- selected %>% select(benchmark, interval, cluster, cpi) %>%
+	full_join(weights) %>% group_by(benchmark, interval) %>%
+	summarise(weighted_cpi = sum(cpi * weight) / length(cluster))
+
+# get baseline to compare to
+baseline <- read_csv("baseline/baseline.csv")
+error <- baseline %>% full_join(estimates, by = join_by(benchmark)) %>%
+	mutate(error = abs(weighted_cpi - real_cpi), percent_error = error / real_cpi)
