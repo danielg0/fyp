@@ -247,6 +247,8 @@ As a reminder, a BBV expresses the behaviour of a single interval in a program a
 
 Given two BBVs of size $N$, $B^N_a$ and $B^N_b$, the sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an instruction flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from $a$ of size $2N$, $B^{2N}_a$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in figure X.
 
+![An example of how an initial set of BBVs of interval size 4 can be supersized to produce BBVs of larger sizes](diagrams/supersampling.drawio.svg)
+
 Our approach to generate a set of BBV arrays given a set of output intervals, $is$ is:
 
 1. Pick the smallest interval in $is$, $i_0$ as the *input interval size*
@@ -260,10 +262,21 @@ In the optimal configuration where the input interval size is a factor of every 
 
 ## Sub-sampling
 
+# The Behaviour of SimPoint sets
+
+In this chapter
+
+![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
+
+## Methodology
+
+## Results
+
 # Future Work
 
 - Incorporating BBV generation into Gem5
 
+<!--
 # Project Plan
 
 1. Improved background **(31st Jan)**
@@ -290,6 +303,7 @@ In the optimal configuration where the input interval size is a factor of every 
 7. Have first draft of final report done by **(11th April)**
 8. Have final report finished by **(23rd May)**, leaving time for Paul/Jacky to go over it and some wiggle room for things to be delayed.
 
+
 # Evaluation Plan
 
 # Ethical Issues
@@ -300,9 +314,9 @@ No other ethical issues exist.
 
 # Images
 
-<!-- ![Test plot](./experiments/1_Variance/Rplots.tex) -->
+-->
 
-![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
+<!-- ![Test plot](./experiments/1_Variance/Rplots.tex) -->
 
 # Bibliography {.unnumbered}
 
