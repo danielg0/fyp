@@ -34,23 +34,30 @@ secnos-cleveref: true
 fignos-cleveref: true
 ---
 
+# Abstract {.unnumbered}
+
+Efficient evaluation of novel hardware designs is important for effective architectural research. Representative sampling techniques such as SimPoint assist in this by estimating performance metrics from simulations of a part of a program. In this report, we will:
+
+- Investigate the tradeoff between error and simulation time present when choosing a SimPoint set's interval size
+- Discuss techniques for sub-sampling and super-sampling existing SimPoint BBV arrays to generate arrays with different interval sizes
+- Demonstrate the viability of combining multiple SimPoint sets of different interval sizes with modern ML techniques for parameter optimisation to find performant configurations
+- Present an implementation that can find global maximal configurations for given SPEC benchmarks with X% less simulation time than traditional techniques
+
 # Introduction
 
-Modern computer architecture research often simulates how new designs would perform on existing benchmark suites like SPEC CPU 2017 [@speccpu2017]. This is a lengthy process, with single runs taking weeks or months, a cost at odds with the desire to test many different configurations of hardware parameters (cache sizes and associativities, register counts, store queue lengths, etc.) to accurately identify the Pareto front[^pareto]. As a result, much research has been done both on speeding up simulators and reducing the amount of instructions that must be simulated to get an accurate benchmark result.
+Modern computer architecture research often simulates how new designs would perform on existing benchmark suites like SPEC CPU 2017 [@speccpu2017]. This is a lengthy process, with single runs taking weeks or months, a cost at odds with the desire to test many different configurations of hardware parameters (cache sizes and associativities, register counts, store queue lengths, etc.) to accurately identify globally minimaly configurations and build a Pareto front[^pareto]. As a result, much research has been done both on speeding up simulators and reducing the amount of instructions that must be simulated to get an accurate benchmark result.
 
 [^pareto]: The Pareto front is the set of "efficient" configurations which cannot be changed to improve on one metric (power usage, instructions per cycle, etc.) without another metric worsening.
 
 This has resulted in the development of SimPoint [@simpoint1], a tool for identifying the phases of execution present in a program using clustering algorithms and extracting samples representative of those phases, allowing for accurate estimation of metrics whilst executing a fraction of a full benchmark. The number of instructions that need simulating and error of a given set of SimPoints is influenced by several variables, including the size of those generated samples [@tracedoctor].
 
-We (aim to) explore multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we (hope to) show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times. By extending the existing probability model for the SimPoint clustering approach, we aim to derive methods for determining these error rates efficiently whilst generating checkpoints.
+In this document, we will explore multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times.
 
 [^bbvs]: Basic Block Vectors, for more see {@sec:simpoint}
 
-Bayesian optimisation is an approach to determine the minimal value of a function with few evaluations of the function. Modern Bayesian optimisers [@hypermapper2] can work with multiple discrete or continuous parameters with constraints on their values. This makes them ideal for working with hardware parameters, where we want to limit exploration to designs that are feasible. They also have the ability for a user to pass in a prior distribution, representing preexisting knowledge about the problem space and where the optimal solution may exist that can be used to drive where we evaluate the function next.
+By combining the SimPoint approach with Bayesian optimisation, we will demonstrate a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations with confidence levels derived from our clustering probability model. By feeding this back into the Bayesian optimisation process, we can quickly assess the performance across the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
 
-By combining the SimPoint approach with Bayesian optimisation, we (aim to) construct a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations with confidence levels derived from our clustering probability model. By feeding this back into the Bayesian optimisation process, we can quickly assess the performance across the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
-
-We (will) then demonstrate our implementation of this approach on a set of benchmarks, showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
+We will then demonstrate our implementation of this approach on a subset of SPEC CPU 2017 [@speccpu2017], showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
 
 # Background
 
@@ -104,13 +111,13 @@ SMARTS [@smarts-paper] uses the mathematical theory above to predetermine the si
 
 $$V = {\sigma \over \mu}$$
 
-This typically isn't known beforehand, so the SMARTS approach estimates its value using an initial large sample of size $n_\textnormal{init}$. If this initial sample's variance, $\hat{V}$, is insufficient for the target confidence level, then a new value for the size of the sample $n_\textnormal{tuned}$ can be calculated from $\hat{V}$.
+This typically is not known beforehand, so the SMARTS approach estimates its value using an initial large sample of size $n_\textnormal{init}$. If this initial sample's variance, $\hat{V}$, is insufficient for the target confidence level, then a new value for the size of the sample $n_\textnormal{tuned}$ can be calculated from $\hat{V}$.
 
 Once we know how large to make the sample, the SMARTS technique involves alternating between running a cycle-accurate and functional simulator model. The final metric result is calculated based on the $n$ sample phases. We also track the measured coefficient of variance $\hat{V}$ so we can compute the confidence bounds on our estimate. The value of $\hat{V}$ can also be reused to calculate the initial sample size for future experiments on the same program.
 
 ### Warm-up
 
-One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that isn't maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle- accurate simulation, leading to an increase in cache misses and branch mispredictions that wouldn't occur in a complete execution.
+One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that is not maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle- accurate simulation, leading to an increase in cache misses and branch mispredictions that wouldn't occur in a complete execution.
 
 How best to solve this has been the subject of research. [@samplestartcontextswitch] proposed a method where samples start being collected only after a context switch, under the assumption that at least for smaller caches, the cache will be flushed during the switch. [@reversestatereconstruction] suggests tracking the data that is needed for reconstructing architecture state during functional simulation, so that once the switch to cycle- accurate simulation is made, the processor structures can be filled back up in reverse. SMARTS approaches this problem in two ways: with detailed warming and with functional warming.
 
@@ -186,11 +193,14 @@ We can treat all the collected BBVs as points in an $n$-dimensional space, where
 
 $$\sqrt { \sum_{i=1}^n (a_i - b_i)^2 }$$
 
-To identify the phases of the program from the BBVs, we want to find groups of points in our space that are close together, and so have similar program behaviour. This is a clustering problem which can be solved using algorithms from the field of machine learning. The original implementation, [@simpoint1], used $k$-means clustering, whereas [@simpoint-clustering] proposed using multinomial clustering instead. These are briefly discussed below.
+To identify the phases of the program from the BBVs, we want to find groups of points in our space that are close together, and so have similar program behaviour. This is a clustering problem which can be solved using algorithms from the field of machine learning. The original implementation, [@simpoint1], used $k$-means clustering, which is briefly discussed below.
+
+<!-- whereas [@simpoint-clustering] proposed using multinomial clustering instead. These are briefly discussed below.
 
 ### Clustering
+-->
 
-#### $k$-Means Clustering
+### $k$-Means Clustering
 
 $k$-Means clustering iteratively splits BBVs into $k$ sets, where $k$ is chosen before the process begins. First, a random linear map is performed on the BBV space to reduce the dimensions from the, potentially very high, number of basic blocks in the program, typically to fifteen - this avoids "the curse of dimensionality", where a high number of dimensions reduces the effectiveness of $k$-means clustering. Then, $k$ random points are picked to act as the initial centres of each set, and the following steps are followed:
 
@@ -221,11 +231,13 @@ $$\textnormal{BIC}(D, k) = l(D \mid k) - {p_j \log R \over 2}$$
 
 Once a BIC score is generated for the all the $k$ SimPoint is considering, it determines the greatest score, $\textnormal{BIC}_\textnormal{max}$ and then multiplies it by the BIC threshold parameter. The SimPoint approach then picks the clustering with the smallest $k$ that has a BIC clustering greater than that product [@tracedoctor].
 
+<!--
 #### Multinomial Clustering
 
-The process of $k$-means clustering is fast, however it's not guaranteed to find an optimal solution and
+The process of $k$-means clustering is fast, however it is not guaranteed to find an optimal solution and
 
 ...
+-->
 
 ### Approach Summary
 
@@ -241,11 +253,27 @@ The process of $k$-means clustering is fast, however it's not guaranteed to find
 
 To produce a final performance metric, do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. Then, we weight the performance metrics of each phase by the proportion of BBVs in that phase’s cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
 
-## Early Points
+### Early Points
 
 Picking SimPoints from the centre of the detected clusters ensures they are representative of the BBVs in that cluster, but it can also result in functionally simulating through other intervals with very similar behaviour. [@simpoint-early-and-stats] recognises this and extends the SimPoints approach to consider how far an interval is through the program when picking which one represents each cluster. The aim is to pick a representive cluster that is earliest in the program, such that simulation time, either during fast-forwarding or while taking checkpoints, is minimised.
 
-To 
+To try and choose clusterings where there is a BBV that occurs early in every cluster, the authors created a new variable _EarlySP_, based on the BIC score, where _StartLastCluster_ is a percentage representing how far through execution the last cluster is encountered, and $w$ is a weight to influence the impact this has on the final BIC:
+
+$$\textit{EarlySP} = \textnormal{BIC} \times \left(1 - {\textit{StartLastCluster} \over w}\right)$$
+
+Once a value of $k$ and a BBV clustering has been decided using this new BIC, an upper bound on how far through the binary we will to simulate is determined by picking an early sample from the cluster whose centre is latest in the binary. This early sample is picked by ordering all the BBVs for that latest cluster by Euclidean distance to the centre, then picking the BBV from the top 1% that occurs earliest. Then, when picking simulation points from other clusters, we limit our choice to BBVs that occur before this upper bound, otherwise following the standard SimPoint procedure in picking the closest BBV to the centre of each cluster.
+
+### Limitations
+
+As the collection of BBVs requires identifying all the basic blocks in a program, we’re limited to analysing non-self-modifying binaries. For just-in-time (JIT) compiled programs, recompilation of a function with optimisations enabled will obscure the similarity in code calling that function after from those calls before the recompilation, and reuse of code cache in long-running programs could create false similarity between unrelated intervals. This hinders the ability of the SimPoint approach to identify phases accurately.
+
+### Validation Studies
+
+The effectiveness of the SimPoints approach in accurately estimating performance metrics has been shown experimently. The original authors demonstrated its effectiveness in estimating the CPI of SPEC CPU benchmarks in [@simpoint-early-and-stats], and [@power-simpoint] verified these results and extended them to show the SimPoint approach could also be used to estimate power usage.
+
+## Bayesian Optimisation
+
+Bayesian optimisation is an approach to determine the minimal value of a function with few evaluations of the function. Modern Bayesian optimisers [@hypermapper2] can work with multiple discrete or continuous parameters with constraints on their values. This makes them ideal for working with hardware parameters, where we want to limit exploration to designs that are feasible. They also have the ability for a user to pass in a prior distribution, representing preexisting knowledge about the problem space and where the optimal solution may exist that can be used to drive where we evaluate the function next.
 
 # Generating Basic Block Vectors
 
@@ -257,7 +285,7 @@ As a reminder, a BBV expresses the behaviour of a single interval in a program a
 
 Given two BBVs of size $N$, $B^N_a$ and $B^N_b$, the sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an instruction flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from $a$ of size $2N$, $B^{2N}_a$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in @fig:supersample_approach.
 
-![An example of how an initial set of BBVs of interval size 4 can be supersized to produce BBVs of larger sizes](diagrams/supersampling.drawio.svg){#fig:supersample_approach}
+![An example of how an initial set of BBVs of interval size 4 can be supersized to produce BBVs of larger sizes. Arrows show where several basic block vectors have been summed together.](diagrams/supersampling.drawio.svg){#fig:supersample_approach}
 
 Our approach to generate a set of BBV arrays given a set of output intervals, $is$ is:
 
@@ -270,9 +298,11 @@ Our approach to generate a set of BBV arrays given a set of output intervals, $i
 
 In the optimal configuration where the input interval size is a factor of every we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval. We also take less time to do so, requiring a constant amount of simulation time with respect to the number of target intervals.
 
-For non-optimal configurations of intervals we can add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above.
+For non-optimal configurations of intervals we can add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. This does not add must time cost to the overall generation \todo{Plot this} as the interval size does not have a large impact on overall simulation time.
 
 ## Sub-sampling
+
+
 
 # The Behaviour of SimPoint sets
 
