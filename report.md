@@ -36,12 +36,14 @@ fignos-cleveref: true
 
 # Abstract {.unnumbered}
 
-Efficient evaluation of novel hardware designs is important for effective architectural research. Representative sampling techniques such as SimPoint assist in this by estimating performance metrics from simulations of a part of a program. In this report, we will:
+Fast evaluation of new hardware ideas is important for effective architectural research. Representative sampling techniques such as SimPoint assist in this by estimating performance metrics from simulations of a part of a program. It has been shown that these estimates can be very accurate when simulation intervals are sufficently long. This thesis introduces a technique for combining short and long simulation intervals with ML parameter optimisation techniques to find optimal hardware configurations. Our main contributions include:
 
-- Investigate the tradeoff between error and simulation time present when choosing a SimPoint set's interval size
-- Discuss techniques for sub-sampling and super-sampling existing SimPoint BBV arrays to generate arrays with different interval sizes
-- Demonstrate the viability of combining multiple SimPoint sets of different interval sizes with modern ML techniques for parameter optimisation to find performant configurations
-- Present an implementation that can find global maximal configurations for given SPEC benchmarks with X% less simulation time than traditional techniques
+- Investigating the tradeoff between error and simulation time present when choosing a SimPoint set's interval size
+- Discussing techniques for sub-sampling and super-sampling existing SimPoint BBV arrays to generate arrays with different interval sizes
+- Demonstrating the viability of combining multiple SimPoint sets of different interval sizes with modern ML techniques for parameter optimisation to find performant configurations
+- Presenting an implementation that can find global maximal configurations for given SPEC benchmarks with X% less simulation time than traditional techniques
+
+The tools this thesis introduces will contribute to making architectural design space exploration cheaper and wide searches feasible in future reasearch.
 
 # Introduction
 
@@ -54,6 +56,8 @@ This has resulted in the development of SimPoint [@simpoint1], a tool for identi
 In this document, we will explore multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times.
 
 [^bbvs]: Basic Block Vectors, for more see {@sec:simpoint}
+
+\todo{random search/bay opt}
 
 By combining the SimPoint approach with Bayesian optimisation, we will demonstrate a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations with confidence levels derived from our clustering probability model. By feeding this back into the Bayesian optimisation process, we can quickly assess the performance across the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
 
@@ -81,17 +85,23 @@ Evaluating a whole benchmark suite with a simulator's cycle-accurate model is te
 
 ## Sampled Simulation Techniques
 
-![Potential sets of samples for the different techniques, based on [@simpoint-textbook, Fig 6.2]](diagrams/sim-sample-techniques.drawio.svg)
+Accurate simulations of entire benchmark suites can take days or weeks to complete. Rather than simulate them entirely, we can simulate a portion and use that to estimate overall performance. This chapter will discuss three different methods for picking a sample to simulate.
 
-In order to achieve a balance between the accuracy of a microarchitectural simulation and speed of a functional model, we can run a cycle-accurate simulator on a subset of a program's complete execution. There are three main approaches to sampling a program [@simpoint-textbook, Ch 6] that can produce results that are representative of a programs varying behaviour:
+Many simulators offer both accurate cycle-level models and fast functional models. In order to achieve a balance between the accuracy and speed of these two models, we can run a cycle-accurate simulator on a subset of a program's complete execution and use the functional model for the rest. There are three main approaches to sampling a program [@simpoint-textbook, Ch 6] that can produce results that are representative of a programs varying behaviour:
 
 - Random sampling, where we distribute the sets of instructions that we sample randomly throughout the entire execution
 - Periodic sampling techniques, such as SMARTS (see {@sec:smarts}), where those sets are distributed regularly throughout the execution - the distance from one set to the next is predetermined
 - Representative, or targeted, sampling techniques such as SimPoint (see {@sec:simpoint}), which start by analysing the program, then pick the sets of instructions to sample that collectively represent the full behaviour of the program
 
+{\*@fig:sampling-techniques} shows one set of samples that could be picked using these three methods for a given program. The random samples are distributed randomly throughout the program whereas the periodic occur at regular intervals. Targeted samples are taken for the three different phases in the program, which correspond to the three different IPC behaviours.
+
+![Potential sets of samples for the different techniques, based on [@simpoint-textbook, Fig 6.2]](diagrams/sim-sample-techniques.drawio.svg){#fig:sampling-techniques}
+
 ### Statistical Sampling
 
-Both random and periodic sampling are statistical sampling techniques that build upon existing mathematical theory, such as the central limit theorem. The central limit theorem states that if sufficient independent observations are taken of a population (ie. more than thirty) with a finite variance $\sigma^2$ and mean $\mu$, then the distribution of the sample mean $\bar{x}$ approximates a normal distribution with mean $\mu$ and variance $\sigma^2 \over n$, irrespective of how the population is distributed.
+Both random and periodic sampling are statistical sampling techniques that build upon existing mathematical theory, such as the central limit theorem, which we will explain.
+
+The central limit theorem states that if sufficient independent observations are taken of a population (ie. more than thirty) with a finite variance $\sigma^2$ and mean $\mu$, then the distribution of the sample mean $\bar{x}$ approximates a normal distribution with mean $\mu$ and variance $\sigma^2 \over n$, irrespective of how the population is distributed.
 
 Pratically, if we use a statistical sampling method on a program and take $n$ samples of a performance metric, $[x_1, \ldots, x_n]$, we can calculate a sample mean $\bar{x}$ and sample variance $s^2$ as follows:
 
@@ -107,7 +117,9 @@ Where the value $z_{1-c \over 2}$, the $(100c)$th percentile of the standard nor
 
 ## SMARTS
 
-SMARTS [@smarts-paper] uses the mathematical theory above to predetermine the size, $n$, of program samples based on a desired confidence level. This also requires the calculation of a coefficient of variation $V$:
+SMARTS [@smarts-paper] is a periodic sampling technique that switches at regular intervals between an accuration cycle-level simulation used to collect metrics and a fast functional simulator that quickly reaches the next sampling point.
+
+SMARTS [@smarts-paper] uses the mathematical theory in {@sec:statistical-sampling} to predetermine the size, $n$, of program samples based on a desired confidence level of the final performance metric. This also requires the calculation of a coefficient of variation $V$:
 
 $$V = {\sigma \over \mu}$$
 
@@ -117,7 +129,7 @@ Once we know how large to make the sample, the SMARTS technique involves alterna
 
 ### Warm-up
 
-One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that is not maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle- accurate simulation, leading to an increase in cache misses and branch mispredictions that wouldn't occur in a complete execution.
+One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that is not maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle-accurate simulation, leading to an increase in cache misses and branch mispredictions that wouldn't occur in a complete execution. Without warm-up, these misses and mispredications would increase the error in estimated performance metrics.
 
 How best to solve this has been the subject of research. [@samplestartcontextswitch] proposed a method where samples start being collected only after a context switch, under the assumption that at least for smaller caches, the cache will be flushed during the switch. [@reversestatereconstruction] suggests tracking the data that is needed for reconstructing architecture state during functional simulation, so that once the switch to cycle- accurate simulation is made, the processor structures can be filled back up in reverse. SMARTS approaches this problem in two ways: with detailed warming and with functional warming.
 
@@ -133,7 +145,23 @@ The resulting sampling looks as follows:
 
 ## SimPoint
 
-An alternative approach proposed by [@simpoint1] is based on the insight that many programs have repeated phases of similar behaviour. By identifying these phases and simulating samples of the program that exhibit those phases' behaviours, we can produce good estimates for metric values over the whole runtime of the program. The behaviour of a given section of a program can be characterised by the instructions it executes [@bbv-perf-correlation], and so the SimPoint approach identifies phases by considering basic blocks, sections of the program with a single entry and exit point that contain no control flow. For example, the following C function to find the maximal element of an array has 6 basic blocks, annotated 1-6 in the x86 assembly output on the right:
+SimPoint is a targeted sampling technique that tracks the code executed by a program and uses that to decide where to sample in order to include all the behaviours it exhibits. This chapter will introduce the technique and discuss some further research to extend its functionality.
+
+![A summary of the original SimPoint [@simpoint1] process](diagrams/simpoint-overview.drawio.svg){#fig:simpoint-summary}
+
+SimPoint is composed into three parts, collection of a program trace, use of that program trace to identify the different phases of behaviour in the program and selection of samples to simulation from each of those phases. The process of identifying phases is shown in {@fig:simpoint-summary} which is labelled as follows:
+
+1. Simulate the entire program on a simplified CPU, tracking the basic blocks ({@sec:basic-blocks}) being executed in order to build basic block vectors (BBVs)
+2. Represent those vectors as points in a basic block space
+3. Perform a random linear map on the set of BBVs to reduce the dimensionality of the data
+4. Group the BBVs using $k$-means clustering ({@sec:k-means-clustering}), which identifies the phases in the program
+5. Pick a BBV, and corresponding interval, closest to the centre of each cluster to represent it, recording the proportion of BBVs in that cluster
+
+To produce a final performance metric, we do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. We then weight the performance metrics of each phase by the proportion of BBVs in that phase's cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
+
+### Basic Blocks
+
+Introduced by [@simpoint1], SimPoint is based on the insight that many programs have repeated phases of similar behaviour. By identifying these phases and simulating samples of the program that exhibit those phases' behaviours, we can produce good estimates for metric values over the whole runtime of the program. The behaviour of a given section of a program can be characterised by the instructions it executes [@bbv-perf-correlation], and so the SimPoint approach identifies phases by considering basic blocks, sections of the program with a single entry and exit point that contain no control flow. For example, the following C function to find the maximal element of an array has 6 basic blocks, annotated 1-6 in the x86 assembly output on the right:
 
 ```{=latex}
 \begin{multicols}{2}
@@ -238,20 +266,6 @@ The process of $k$-means clustering is fast, however it is not guaranteed to fin
 
 ...
 -->
-
-### Approach Summary
-
-![A summary of the original SimPoint [@simpoint1] process](diagrams/simpoint-overview.drawio.svg){#fig:simpoint-summary}
-
-{\*@fig:simpoint-summary} is labelled as follows:
-
-1. Simulate the entire program on a simplified CPU, tracking the basic blocks being executed in order to build BBVs
-2. Represent those vectors as points in a basic block space
-3. Perform a random linear map on the set of BBVs to reduce the dimensionality of the data
-4. Cluster the BBVs, identifying the phases in the program
-5. Pick a BBV closest to the centre of each cluster to represent it, recording the proportion of BBVs in that cluster
-
-To produce a final performance metric, do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. Then, we weight the performance metrics of each phase by the proportion of BBVs in that phase’s cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
 
 ### Early Points
 
