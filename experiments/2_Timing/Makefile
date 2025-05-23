@@ -36,7 +36,7 @@ experiment: $(BENCHMARKS:%=%.experiment)
 
 .PHONY: clean
 clean:
-	rm -rf profiling/ simpoints/ checkpoints/
+	rm -rf profiling/ simpoints/ checkpoints/ baseline/
 
 # collecting initial bbvs (% is a benchmark name with no /)
 .PRECIOUS: profiling/%/simpoint.bb.gz
