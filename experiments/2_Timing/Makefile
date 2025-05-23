@@ -3,6 +3,10 @@ GEM5_CONFIG_FILE = ~/gem5/configs/deprecated/example/se.py
 SIMPOINT = ~/simpoint/bin/simpoint
 TIME = /usr/bin/time
 
+# $(R) is the root directory of the experiment
+# allows us to be in a symlink directory and reach out
+R = $(shell pwd)
+
 # coremark benchmarks to run. none contain /. all share the same arguments. symlinks in bin/ point to binaries
 #BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha zip
 #COREMARK_ARGS = -v0 -c1 -w1 -i10
@@ -44,13 +48,12 @@ profiling/%/simpoint.bb.gz: bin/%
 	mkdir -p $(@D)
 	# change directory to spec run folder to execute benchmark there
 	# TODO: could we replace this with a gem5 location alias (--redirects)?
-	cd $<
-	$(TIME) -o ../../$(@D)/collect.time $(GEM5) --outdir=../../$(@D) $(GEM5_CONFIG_FILE) \
-		-c $(BINARY.$*) --options='$(FLAGS.$*)' \
+	cd $< && $(TIME) -o $(R)/$(@D)/collect.time $(GEM5) \
+		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
+		-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
 		--simpoint-profile --simpoint-interval $(PROFILED_BBV_SIZE) \
 		--cpu-type=X86AtomicSimpleCPU $(GEM5_MEMORY) \
-		2> ../../$(@D)/err.log > ../../$(@D)/log.log
-	cd -
+		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 
 # scaling profiled bbv up to greater interval sizes - from a single profiled
 # profiling/b/simpoint.bb.gz for some benchmark b, we produce a simpoints/b/n.bb
@@ -85,13 +88,12 @@ simpoints/%.points simpoints/%.pweights: simpoints/%.labels simpoints/%.weights
 .PRECIOUS: checkpoints/%/generated
 checkpoints/%/generated: simpoints/%.points simpoints/%.pweights
 	mkdir -p $(@D)
-	cd bin/$(*D)
-	$(TIME) -o ../../$(@D)/checkpointing.time $(GEM5) --outdir ../../$(@D) $(GEM5_CONFIG_FILE) \
-		-c $(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
-		--take-simpoint-checkpoint=../../$<,../../simpoints/$*.pweights,$(*F),$(WARMUP) \
+	cd bin/$(*D) && $(TIME) -o $(R)/$(@D)/checkpointing.time $(GEM5) \
+		--outdir $(R)/$(@D) $(GEM5_CONFIG_FILE) \
+		-c ./$(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
+		--take-simpoint-checkpoint=$(R)/$<,$(R)/simpoints/$*.pweights,$(*F),$(WARMUP) \
 		--cpu-type=X86AtomicSimpleCPU $(GEM5_MEMORY) \
-		2> ../../$(@D)/err.log > ../../$(@D)/log.log
-	cd -
+		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
 
 # run generated checkpoints
@@ -99,14 +101,12 @@ checkpoints/%/generated: simpoints/%.points simpoints/%.pweights
 .PRECIOUS: results/%/generated
 results/%/generated: simpoints/%.points checkpoints/%/generated
 	mkdir -p $(@D)
-	cd bin/$(*D)
-	$(TIME) -o ../../$(@D)/collection.time ../../runCheckpoints.py \
-		--inPoints ../../$< --checkpointdir ../../checkpoints/$* \
-		--outdir ../../$(@D) --warmup $(WARMUP) --width $(*F) \
+	cd bin/$(*D) && $(TIME) -o $(R)/$(@D)/collection.time $(R)/runCheckpoints.py \
+		--inPoints $(R)/$< --checkpointdir $(R)/checkpoints/$* \
+		--outdir $(R)/$(@D) --warmup $(WARMUP) --width $(*F) \
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
-			-c $(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
+			-c ./$(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
 			--cpu-type=X86O3CPU $(GEM5_MEMORY)
-	cd -
 	touch $@
 
 # run baseline simulations
