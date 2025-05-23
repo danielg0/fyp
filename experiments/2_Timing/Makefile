@@ -19,7 +19,7 @@ BINARY.spec.leela = leela_s_peak.danielg-base-m64
 FLAGS.spec.leela = ref.sgf
 BINARY.spec.x264 = x264_s_peak.danielg-base-m64
 FLAGS.spec.x264 = --pass 1 --stats x264_stats.log --bitrate 1000 --frames 1000 -o BuckBunny_New.264 BuckBunny.yuv 1280x720
-BINARY.spec.nab = nab_s_ak.danielg-base-m64
+BINARY.spec.nab = nab_s_peak.danielg-base-m64
 FLAGS.spec.nab = 3j1n 20140317 220
 
 PROFILED_BBV_SIZE = 125000
