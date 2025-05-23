@@ -28,6 +28,7 @@ header-includes:
 
     %% Included to make secnos work
     \usepackage{hyperref}
+    \usepackage{cleveref}
     ```
 link-citations: true
 secnos-cleveref: true
@@ -95,7 +96,7 @@ Many simulators offer both accurate cycle-level models and fast functional model
 
 {\*@fig:sampling-techniques} shows one set of samples that could be picked using these three methods for a given program. The random samples are distributed randomly throughout the program whereas the periodic occur at regular intervals. Targeted samples are taken for the three different phases in the program, which correspond to the three different IPC behaviours.
 
-![Potential sets of samples for the different techniques, based on [@simpoint-textbook, Fig 6.2]](diagrams/sim-sample-techniques.drawio.svg){#fig:sampling-techniques}
+![Potential sets of samples for the different sampling techniques, based on [@simpoint-textbook, Fig 6.2]](diagrams/sim-sample-techniques.drawio.svg){#fig:sampling-techniques}
 
 ### Statistical Sampling
 
@@ -115,7 +116,7 @@ $$\left[ \bar{x} - z_{1-c \over 2} {s \over \sqrt{n}}, \bar{x} + z_{1-c \over 2}
 
 Where the value $z_{1-c \over 2}$, the $(100c)$th percentile of the standard normal distribution, is taken from a precomputed table. The probability that the true mean value of the metric $\mu$ resides within this interval is $c$.
 
-## SMARTS
+### SMARTS
 
 SMARTS [@smarts-paper] is a periodic sampling technique that switches at regular intervals between an accuration cycle-level simulation used to collect metrics and a fast functional simulator that quickly reaches the next sampling point.
 
@@ -127,7 +128,7 @@ This typically is not known beforehand, so the SMARTS approach estimates its val
 
 Once we know how large to make the sample, the SMARTS technique involves alternating between running a cycle-accurate and functional simulator model. The final metric result is calculated based on the $n$ sample phases. We also track the measured coefficient of variance $\hat{V}$ so we can compute the confidence bounds on our estimate. The value of $\hat{V}$ can also be reused to calculate the initial sample size for future experiments on the same program.
 
-### Warm-up
+#### Warm-up
 
 One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that is not maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle-accurate simulation, leading to an increase in cache misses and branch mispredictions that wouldn't occur in a complete execution. Without warm-up, these misses and mispredications would increase the error in estimated performance metrics.
 
@@ -143,7 +144,7 @@ The resulting sampling looks as follows:
 
 [^slowdown]: The paper implemented a functional warming model that could operate at 55% the speed of the existing function simulation model.
 
-## SimPoint
+### SimPoint
 
 SimPoint is a targeted sampling technique that tracks the code executed by a program and uses that to decide where to sample in order to include all the behaviours it exhibits. This chapter will introduce the technique and discuss some further research to extend its functionality.
 
@@ -159,7 +160,7 @@ SimPoint is composed into three parts, collection of a program trace, use of tha
 
 To produce a final performance metric, we do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. We then weight the performance metrics of each phase by the proportion of BBVs in that phase's cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
 
-### Basic Blocks
+#### Basic Blocks
 
 Introduced by [@simpoint1], SimPoint is based on the insight that many programs have repeated phases of similar behaviour. By identifying these phases and simulating samples of the program that exhibit those phases' behaviours, we can produce good estimates for metric values over the whole runtime of the program. The behaviour of a given section of a program can be characterised by the instructions it executes [@bbv-perf-correlation], and so the SimPoint approach identifies phases by considering basic blocks, sections of the program with a single entry and exit point that contain no control flow. For example, the following C function to find the maximal element of an array has 6 basic blocks, annotated 1-6 in the x86 assembly output on the right:
 
@@ -228,7 +229,7 @@ To identify the phases of the program from the BBVs, we want to find groups of p
 ### Clustering
 -->
 
-### $k$-Means Clustering
+#### $k$-Means Clustering
 
 $k$-Means clustering iteratively splits BBVs into $k$ sets, where $k$ is chosen before the process begins. First, a random linear map is performed on the BBV space to reduce the dimensions from the, potentially very high, number of basic blocks in the program, typically to fifteen - this avoids "the curse of dimensionality", where a high number of dimensions reduces the effectiveness of $k$-means clustering. Then, $k$ random points are picked to act as the initial centres of each set, and the following steps are followed:
 
@@ -267,7 +268,7 @@ The process of $k$-means clustering is fast, however it is not guaranteed to fin
 ...
 -->
 
-### Early Points
+#### Early Points
 
 Picking SimPoints from the centre of the detected clusters ensures they are representative of the BBVs in that cluster, but it can also result in functionally simulating through other intervals with very similar behaviour. [@simpoint-early-and-stats] recognises this and extends the SimPoints approach to consider how far an interval is through the program when picking which one represents each cluster. The aim is to pick a representive cluster that is earliest in the program, such that simulation time, either during fast-forwarding or while taking checkpoints, is minimised.
 
@@ -277,11 +278,11 @@ $$\textit{EarlySP} = \textnormal{BIC} \times \left(1 - {\textit{StartLastCluster
 
 Once a value of $k$ and a BBV clustering has been decided using this new BIC, an upper bound on how far through the binary we will to simulate is determined by picking an early sample from the cluster whose centre is latest in the binary. This early sample is picked by ordering all the BBVs for that latest cluster by Euclidean distance to the centre, then picking the BBV from the top 1% that occurs earliest. Then, when picking simulation points from other clusters, we limit our choice to BBVs that occur before this upper bound, otherwise following the standard SimPoint procedure in picking the closest BBV to the centre of each cluster.
 
-### Limitations
+#### Limitations
 
 As the collection of BBVs requires identifying all the basic blocks in a program, we’re limited to analysing non-self-modifying binaries. For just-in-time (JIT) compiled programs, recompilation of a function with optimisations enabled will obscure the similarity in code calling that function after from those calls before the recompilation, and reuse of code cache in long-running programs could create false similarity between unrelated intervals. This hinders the ability of the SimPoint approach to identify phases accurately.
 
-### Validation Studies
+#### Validation Studies
 
 The effectiveness of the SimPoints approach in accurately estimating performance metrics has been shown experimently. The original authors demonstrated its effectiveness in estimating the CPI of SPEC CPU benchmarks in [@simpoint-early-and-stats], and [@power-simpoint] verified these results and extended them to show the SimPoint approach could also be used to estimate power usage.
 
@@ -297,9 +298,11 @@ As a reminder, a BBV expresses the behaviour of a single interval in a program a
 
 ## Super-sampling
 
-Given two BBVs of size $N$, $B^N_a$ and $B^N_b$, the sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an instruction flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from $a$ of size $2N$, $B^{2N}_a$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in @fig:supersample_approach.
+In order to create sets of BBV arrays with different interval sizes, we can collect one set and scale it up to produce BBV arrays of greater sizes, saving simulation time collecting BBVs.
 
-![An example of how an initial set of BBVs of interval size 4 can be supersized to produce BBVs of larger sizes. Arrows show where several basic block vectors have been summed together.](diagrams/supersampling.drawio.svg){#fig:supersample_approach}
+Given two BBVs of size $N$, $B^N_a$ and $B^N_b$, the sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an instruction flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from $a$ of size $2N$, $B^{2N}_a$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in @fig:supersample-approach.
+
+![An example of how an initial set of BBVs of interval size 4 can be supersized to produce BBVs of larger sizes. Arrows show where several basic block vectors have been summed together.](diagrams/supersampling.drawio.svg){#fig:supersample-approach}
 
 Our approach to generate a set of BBV arrays given a set of output intervals, $is$ is:
 
