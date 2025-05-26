@@ -1,5 +1,8 @@
-GEM5 = ~/gem5/build/X86/gem5.opt
-GEM5_CONFIG_FILE = ~/gem5/configs/deprecated/example/se.py
+# Path to cross-compilation lib
+CROSSLIB = /home/danielg/x-tools/aarch64-unknown-linux-gnu/aarch64-unknown-linux-gnu/sysroot
+
+GEM5 = ~/gem5/build/ARM/gem5.opt
+GEM5_CONFIG_FILE = ~/gem5/configs/deprecated/example/se.py --interp-dir $(CROSSLIB) --redirects /lib64=$(CROSSLIB)/lib64 --redirects /lib=$(CROSSLIB)/lib --redirects /usr/lib=$(CROSSLIB)/usr/lib --redirects /usr/lib64=$(CROSSLIB)/usr/lib64
 SIMPOINT = ~/simpoint/bin/simpoint
 TIME = /usr/bin/time
 
@@ -12,14 +15,14 @@ R = $(shell pwd)
 #COREMARK_ARGS = -v0 -c1 -w1 -i10
 
 # spec benchmarks to run. None contain /. Each has a corresponding symlink in bin/ pointing to that benchmark's run folder
-BENCHMARKS = spec.leela spec.x264 spec.nab
+BENCHMARKS = spec.leela#spec.x264 spec.nab
 
 # for each spec benchmark, the binary name and flags passed to it, given by 'specinvoke -n'
-BINARY.spec.leela = leela_s_peak.danielg-base-m64
+BINARY.spec.leela = leela_s_base.danielg-arm-64
 FLAGS.spec.leela = ref.sgf
-BINARY.spec.x264 = x264_s_peak.danielg-base-m64
+BINARY.spec.x264 = x264_s_base.danielg-arm-64
 FLAGS.spec.x264 = --pass 1 --stats x264_stats.log --bitrate 1000 --frames 1000 -o BuckBunny_New.264 BuckBunny.yuv 1280x720
-BINARY.spec.nab = nab_s_peak.danielg-base-m64
+BINARY.spec.nab = nab_s_base.danielg-arm-64
 FLAGS.spec.nab = 3j1n 20140317 220
 
 PROFILED_BBV_SIZE = 125000
@@ -52,7 +55,7 @@ profiling/%/simpoint.bb.gz: bin/%
 		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
 		--simpoint-profile --simpoint-interval $(PROFILED_BBV_SIZE) \
-		--cpu-type=X86AtomicSimpleCPU $(GEM5_MEMORY) \
+		--cpu-type=ArmAtomicSimpleCPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 
 # scaling profiled bbv up to greater interval sizes - from a single profiled
@@ -92,7 +95,7 @@ checkpoints/%/generated: simpoints/%.points simpoints/%.pweights
 		--outdir $(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./$(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
 		--take-simpoint-checkpoint=$(R)/$<,$(R)/simpoints/$*.pweights,$(*F),$(WARMUP) \
-		--cpu-type=X86AtomicSimpleCPU $(GEM5_MEMORY) \
+		--cpu-type=ArmAtomicSimpleCPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
 
@@ -106,7 +109,7 @@ results/%/generated: simpoints/%.points checkpoints/%/generated
 		--outdir $(R)/$(@D) --warmup $(WARMUP) --width $(*F) \
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
 			-c ./$(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
-			--cpu-type=X86O3CPU $(GEM5_MEMORY)
+			--cpu-type=ArmO3CPU $(GEM5_MEMORY)
 	touch $@
 
 # run baseline simulations
@@ -114,8 +117,9 @@ results/%/generated: simpoints/%.points checkpoints/%/generated
 .PRECIOUS: baseline/%/generated
 baseline/%/generated: bin/%
 	mkdir -p $(@D)
-	$(GEM5) --outdir=$(@D) $(GEM5_CONFIG_FILE) \
-		-c $< --options='$(COREMARK_ARGS)' \
-		--cpu-type=X86O3CPU $(GEM5_MEMORY) \
-		2> $(@D)/err.log > $(@D)/log.log
+	cd $< && $(TIME) -o $(R)/$(@D)/baseline.time $(GEM5) \
+		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
+		-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
+		--cpu-type=ArmO3CPU $(GEM5_MEMORY) \
+		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
