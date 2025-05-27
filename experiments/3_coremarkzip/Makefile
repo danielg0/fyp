@@ -1,8 +1,8 @@
 # Path to cross-compilation lib
 CROSSLIB = /home/danielg/x-tools/aarch64-unknown-linux-gnu/aarch64-unknown-linux-gnu/sysroot
 
-GEM5 = ~/gem5/build/ARM/gem5.opt
-GEM5_CONFIG_FILE = ~/gem5/configs/deprecated/example/se.py --interp-dir $(CROSSLIB) --redirects /lib64=$(CROSSLIB)/lib64 --redirects /lib=$(CROSSLIB)/lib --redirects /usr/lib=$(CROSSLIB)/usr/lib --redirects /usr/lib64=$(CROSSLIB)/usr/lib64
+GEM5 = ~/gem5/build/X86/gem5.opt
+GEM5_CONFIG_FILE = ~/gem5/configs/deprecated/example/se.py
 SIMPOINT = ~/simpoint/bin/simpoint
 TIME = /usr/bin/time
 
@@ -11,7 +11,7 @@ TIME = /usr/bin/time
 R = $(shell pwd)
 
 # coremark benchmarks to run. none contain /. all share the same arguments. symlinks in bin/ point to binaries
-BENCHMARKS = zip.arm
+BENCHMARKS = zip
 # -i picked so that 100m instructions simulated
 COREMARK_ARGS = -v0 -c1 -w1 -i1
 #BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha zip
@@ -58,7 +58,7 @@ profiling/%/simpoint.bb.gz: bin/%
 		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c $< --options='$(COREMARK_ARGS)' \
 		--simpoint-profile --simpoint-interval $(PROFILED_BBV_SIZE) \
-		--cpu-type=ArmAtomicSimpleCPU $(GEM5_MEMORY) \
+		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 
 # scaling profiled bbv up to greater interval sizes - from a single profiled
@@ -98,7 +98,7 @@ checkpoints/%/generated: simpoints/%.points simpoints/%.pweights
 		--outdir $(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./bin/$(*D) --options='$(COREMARK_ARGS)' \
 		--take-simpoint-checkpoint=$(R)/$<,$(R)/simpoints/$*.pweights,$(*F),$(WARMUP) \
-		--cpu-type=ArmAtomicSimpleCPU $(GEM5_MEMORY) \
+		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
 
@@ -112,7 +112,7 @@ results/%/generated: simpoints/%.points checkpoints/%/generated
 		--outdir $(R)/$(@D) --warmup $(WARMUP) --width $(*F) \
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
 			-c ./bin/$(*D) --options='$(COREMARK_ARGS)' \
-			--cpu-type=ArmO3CPU $(GEM5_MEMORY)
+			--cpu-type=O3CPU $(GEM5_MEMORY)
 	touch $@
 
 # run baseline simulations
@@ -123,6 +123,6 @@ baseline/%/generated: bin/%
 	$(TIME) -o $(R)/$(@D)/baseline.time $(GEM5) \
 		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./bin/$* --options='$(COREMARK_ARGS)' \
-		--cpu-type=ArmO3CPU $(GEM5_MEMORY) \
+		--cpu-type=O3CPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
