@@ -1,7 +1,7 @@
 library(tidyverse)
 library(ggthemes)
 
-data <- read_csv("results/data.csv")
+data <- read_csv("results/results.csv")
 variance <- (data %>% group_by(benchmark, interval, cluster) %>% summarise(cpi_var = var(cpi), len = length(cpi)))
 mean_variance <- (variance %>% group_by(interval) %>% summarise(mean = mean(cpi_var, na.rm = TRUE)))
 
