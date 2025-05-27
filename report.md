@@ -300,9 +300,9 @@ As a reminder, a BBV expresses the behaviour of a single interval in a program a
 
 In order to create sets of BBV arrays with different interval sizes, we can collect one set and scale it up to produce BBV arrays of greater sizes, saving simulation time collecting BBVs.
 
-Given two BBVs of size $N$, $B^N_a$ and $B^N_b$, the sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an instruction flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from $a$ of size $2N$, $B^{2N}_a$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in @fig:supersample-approach.
+Take $a$ and $b$, two program intervals of length $N$; let the BBVs of these program intervals, the number of instructions executed from each basic block in each interval, be $B^N_a$ and $B^N_b$. The sum of their components is the number of instructions executed from each basic block in both $a$ and $b$. In an execution flow where $a$ is followed by $b$, $ab$, this is identical to a BBV taken from the beginning of $a$ of size $2N$, $B^{2N}_ab$. This is the basis of our subsampling approach, where BBVs of neighbouring intervals are combined to form the BBV of the sum interval, as illustrated in @fig:supersample-approach.
 
-![An example of how an initial set of BBVs of interval size 4 can be supersized to produce BBVs of larger sizes. Arrows show where several basic block vectors have been summed together.](diagrams/supersampling.drawio.svg){#fig:supersample-approach}
+![An example of how an initial set of BBVs of interval size 4 can be super-sampled to produce BBVs of larger interval sizes. Arrows show where several basic block vectors have been summed together. As 4 is a factor of every other size, this super-sampling is optimal.](diagrams/supersampling.drawio.svg){#fig:supersample-approach}
 
 Our approach to generate a set of BBV arrays given a set of output intervals, $is$ is:
 
@@ -313,13 +313,19 @@ Our approach to generate a set of BBV arrays given a set of output intervals, $i
     a. Add this iteration's BBV to each mutable BBV and add $i_0$ to each instruction counter
     b. For each interval whose instruction counter equals its interval size, append its mutable BBV to its BBV array and reset that intervals counter and mutable BBV
 
-In the optimal configuration where the input interval size is a factor of every we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval. We also take less time to do so, requiring a constant amount of simulation time with respect to the number of target intervals.
+In the optimal configuration, where the input interval size is a factor of every output interval size, we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval. We also require less simulation time with our approach, using a constant amount of compute with respect to the number of target intervals.
 
-For non-optimal configurations of intervals we can add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. This does not add must time cost to the overall generation \todo{Plot this} as the interval size does not have a large impact on overall simulation time.
+For non-optimal configurations of intervals we add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. This does not add much simulation cost to the overall generation \todo{Plot this} as the interval size does not have a large impact on overall simulation time.
 
 ## Sub-sampling
 
-Collecting an array of BBVs for a fresh interval size requires simulating the entire program. Even though this is done with a functional simulator
+Collecting an array of BBVs for a fresh interval size requires simulating the entire program. Even though this can be done with a functional simulator, it still takes a significant amount of time for large programs. Our super-sampling approach requires we collect an array of BBVs for the smallest sized interval we want to simulate with. We now introduce a method for producing sets of BBVs of an interval width greater than the target interval size. This enables the creation of a set of BBV arrays from a preexisting large BBV array, such as the commonly used one million wide interval size used in existing SimPoint research [@simpoint1; @power-simpoint].
+
+Let a BBV of width $2N$, $B^{2N}_{ab} = \{3, 0, 6, \ldots\}$, contain the number of instructions executed from two continuous intervals $a$ and $b$ of length $N$. We have no way to determine the exact split of instructions between the two intervals, but we can estimate it by dividing the instructions equally between $a$ and $b$. This creates two new smaller BBVs of width $N$. The SimPoint implementation available publicly only accepts BBVs made up of integers, \todo{check this} so we round one down and one up forming split BBVs as follows:
+
+$$B^N_a = \left\lceil {B^{2N}_{ab} \over 2} \right\rceil \qquad B^N_b = \left\lfloor {B^{2N}_{ab} \over 2} \right\rfloor$$
+
+## Checkpoint Truncation
 
 # The Behaviour of SimPoint sets
 
