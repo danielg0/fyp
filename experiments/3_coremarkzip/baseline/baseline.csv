@@ -1,2 +1,2 @@
-benchmark,real_cpi
-zip,0.346178
+benchmark,real_cpi,real_ipc
+zip,0.346178,2.888689
