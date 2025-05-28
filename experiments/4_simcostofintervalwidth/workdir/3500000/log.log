@@ -1,0 +1,23 @@
+Global frequency set at 1000000000000 ticks per second
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 24.1.0.3
+gem5 compiled May 21 2025 01:39:25
+gem5 started May 27 2025 17:38:47
+gem5 executing on moonveil, pid 1556820
+command line: /home/danielg/gem5/build/X86/gem5.opt --outdir=workdir/3500000 /home/danielg/gem5/configs/deprecated/example/se.py -c bin/zip '--options=-v0 -c1 -w1 -i1' --simpoint-profile --simpoint-interval 3500000 --cpu-type=AtomicSimpleCPU --mem-size=8GiB --caches --l2cache --l1d_size=64KiB --l1i_size=64KiB
+
+info: Standard input is not a terminal, disabling listeners.
+**** REAL SIMULATION ****
+-  Info: Starting Run...
+-- Workload:zip-test=946108807
+-- zip-test:time(ns)=0
+-- zip-test:contexts=1
+-- zip-test:workers=1
+-- zip-test:iterations=1
+-- zip-test:time(secs)=       0
+-- zip-test:secs/workload=       0
+-- zip-test:workloads/sec=     inf
+-- Done:zip-test=946108807
+Exiting @ tick 10178202397500 because exiting with last active thread context
