@@ -3,6 +3,9 @@ library(scales)
 library(ggthemes)
 
 data <- read_csv("results/results.csv")
+spec_data <- read_csv("../2.1_test/results/results.csv")
+data <- bind_rows(data, filter(spec_data, benchmark == "spec.x264"))
+
 variance <- (data %>% group_by(benchmark, interval, cluster) %>% summarise(cpi_var = var(cpi), len = length(cpi), ipc_var = var(ipc), cpi_sd = sd(cpi), ipc_sd = sd(ipc)))
 mean_variance <- (variance %>% group_by(interval) %>% summarise(mean = mean(cpi_var, na.rm = TRUE)))
 
@@ -23,14 +26,31 @@ ggsave("plots/variance_by_interval_ipc.svg", width=10, height=5)
 # calculate weighted average
 selected <- filter(data, index == 0)
 weights <- read_csv("simpoints/weights.csv")
+spec_weights <- read_csv("../2.1_test/simpoints/weights.csv")
+weights <- bind_rows(weights, filter(spec_weights, benchmark == "spec.x264"))
+
 estimates <- selected %>% select(benchmark, interval, cluster, cpi, ipc) %>%
 	full_join(weights) %>% group_by(benchmark, interval) %>%
 	summarise(weighted_cpi = sum(cpi * weight), weighted_ipc = sum(ipc * weight))
 
 # get baseline to compare to
 baseline <- read_csv("baseline/baseline.csv")
+spec_baseline <- read_csv("../2.1_test/baseline/baseline.csv")
+baseline <- bind_rows(baseline, filter(spec_baseline, benchmark == "spec.x264"))
+
 error <- baseline %>% full_join(estimates, by = join_by(benchmark)) %>%
 	mutate(cpi_error = abs(weighted_cpi - real_cpi),
 	       ipc_error = abs(weighted_ipc - real_ipc),
 	       cpi_percent_error = cpi_error / real_cpi,
 	       ipc_percent_error = ipc_error / real_ipc)
+
+ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark)) +
+		geom_point() + geom_line()
+
+ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark)) +
+	geom_point() + geom_line() +
+	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
+	scale_x_continuous(labels = scales::label_comma()) +
+	labs(x = "Interval Width (instructions)", y = "IPC Error", colour = "Benchmark") +
+	theme_few() + scale_colour_few()
+ggsave("plots/ipc_error_by_interval.svg", width=10, height=5)
