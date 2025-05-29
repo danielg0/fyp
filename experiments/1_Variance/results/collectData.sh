@@ -14,7 +14,7 @@ do
 			cpi=$(grep "system.cpu.cpi" $p/stats.txt | awk '{print $2;}')
 			ipc=$(grep "system.cpu.ipc" $p/stats.txt | awk '{print $2;}')
 		else
-			echo ERROR: %p
+			echo ERROR: $p
 			exit -1
 		fi
 	else
