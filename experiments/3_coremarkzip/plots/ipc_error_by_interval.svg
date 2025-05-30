@@ -38,12 +38,15 @@
 <circle cx='199.14' cy='183.10' r='1.95' style='stroke-width: 0.71; stroke: #FAA43A; fill: #FAA43A;' />
 <circle cx='331.42' cy='234.12' r='1.95' style='stroke-width: 0.71; stroke: #FAA43A; fill: #FAA43A;' />
 <circle cx='595.99' cy='269.89' r='1.95' style='stroke-width: 0.71; stroke: #FAA43A; fill: #FAA43A;' />
-<circle cx='70.99' cy='187.72' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
-<circle cx='75.12' cy='286.52' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
-<circle cx='331.42' cy='223.28' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
-<circle cx='595.99' cy='230.09' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
-<polyline points='70.99,187.72 75.12,286.52 ' style='stroke-width: 1.07; stroke: #5DA5DA; stroke-linecap: butt;' />
-<polyline points='331.42,223.28 595.99,230.09 ' style='stroke-width: 1.07; stroke: #5DA5DA; stroke-linecap: butt;' />
+<circle cx='70.99' cy='222.79' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='75.12' cy='226.08' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='83.39' cy='215.54' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='99.92' cy='242.08' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='133.00' cy='254.84' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='199.14' cy='278.13' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='331.42' cy='280.84' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<circle cx='595.99' cy='303.86' r='1.95' style='stroke-width: 0.71; stroke: #5DA5DA; fill: #5DA5DA;' />
+<polyline points='70.99,222.79 75.12,226.08 83.39,215.54 99.92,242.08 133.00,254.84 199.14,278.13 331.42,280.84 595.99,303.86 ' style='stroke-width: 1.07; stroke: #5DA5DA; stroke-linecap: butt;' />
 <polyline points='70.99,97.91 75.12,20.48 83.39,57.84 99.92,47.84 133.00,159.97 199.14,183.10 331.42,234.12 595.99,269.89 ' style='stroke-width: 1.07; stroke: #FAA43A; stroke-linecap: butt;' />
 <rect x='44.74' y='5.98' width='577.50' height='319.07' style='stroke-width: 1.16; stroke: #4D4D4D;' />
 </g>

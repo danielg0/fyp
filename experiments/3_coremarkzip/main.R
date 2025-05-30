@@ -7,13 +7,22 @@ spec_data <- read_csv("../2.1_test/results/results.csv")
 data <- bind_rows(data, filter(spec_data, benchmark == "spec.x264"))
 
 variance <- (data %>% group_by(benchmark, interval, cluster) %>% summarise(cpi_var = var(cpi), len = length(cpi), ipc_var = var(ipc), cpi_sd = sd(cpi), ipc_sd = sd(ipc)))
-mean_variance <- (variance %>% group_by(interval) %>% summarise(mean = mean(cpi_var, na.rm = TRUE)))
+mean_variance <- (variance %>% group_by(interval) %>% summarise(cpi_mean = mean(cpi_var, na.rm = TRUE), ipc_mean = mean(ipc_var, na.rm = TRUE)))
 
 # be AWARE of the filter occurring here
 variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_var)) +
-	geom_violin(scale = "width") + geom_jitter(alpha=0.25) +
+
+#	geom_violin(scale = "width") +
+#	geom_hline(aes(yintercept = ipc_mean), mean_variance, colour = "red") +
+
+	geom_boxplot(outliers = FALSE) +
+
+	geom_jitter(alpha=0.25, width = 0.125) +
+#	geom_point() +
+
 #	geom_smooth(se = FALSE) +
 #	geom_line(data = mean_variance, aes(x = interval, y = mean), color = "blue") +
+
 #	scale_x_continuous(transform = "log2", breaks = seq(1000, 32000, by=1000),
 #		labels = c("1000", "2000", "", "4000", rep("", 3), "8000", rep("", 7), "16000", rep("", 15), "32000")) +
 	scale_x_continuous(breaks = c()) +
