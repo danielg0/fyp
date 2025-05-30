@@ -45,9 +45,6 @@ error <- baseline %>% full_join(estimates, by = join_by(benchmark)) %>%
 	       ipc_percent_error = ipc_error / real_ipc)
 
 ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark)) +
-		geom_point() + geom_line()
-
-ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark)) +
 	geom_point() + geom_line() +
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
 	scale_x_continuous(labels = scales::label_comma()) +
