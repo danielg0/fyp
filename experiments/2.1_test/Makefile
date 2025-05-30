@@ -15,7 +15,7 @@ R = $(shell pwd)
 #COREMARK_ARGS = -v0 -c1 -w1 -i10
 
 # spec benchmarks to run. None contain /. Each has a corresponding symlink in bin/ pointing to that benchmark's run folder
-BENCHMARKS = spec.leela spec.x264
+BENCHMARKS = spec.x264#spec.leela spec.x264
 
 # for each spec benchmark, the binary name and flags passed to it, given by 'specinvoke -n'
 BINARY.spec.leela = leela_s_base.danielg-arm-64
@@ -38,7 +38,7 @@ SIMPOINT_N = 10
 
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=%.experiment)
-%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated) baseline/%/generated
+%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated) baseline/%/generated regular/%/generated
 	echo Experiment $* done
 
 .PHONY: clean
@@ -110,6 +110,7 @@ results/%/generated: simpoints/%.points checkpoints/%/generated
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
 			-c ./$(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
 			--cpu-type=ArmO3CPU $(GEM5_MEMORY)
+		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
 
 # run baseline simulations
@@ -121,5 +122,19 @@ baseline/%/generated: bin/%
 		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
 		--cpu-type=ArmO3CPU $(GEM5_MEMORY) \
+		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
+	touch $@
+
+# collect regular intervals
+# tick value estimated from existing samples taken of 125000 instruction length intervals
+BIG_NUMBER = 100000000000000000000000000000
+.PRECIOUS: regular/%/generated
+regular/%/generated: bin/%
+	mkdir -p $(@D)
+	cd $< && $(TIME) -o $(R)/$(@D)/regular.time $(GEM5) \
+		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
+		-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
+		--cpu-type=ArmAtomicSimpleCPU $(GEM5_MEMORY) \
+		--take-checkpoints 45000000,45000000 --max-checkpoints $(BIG_NUMBER) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
