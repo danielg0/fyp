@@ -35,7 +35,11 @@ secnos-cleveref: true
 fignos-cleveref: true
 ---
 
-# Abstract {.unnumbered}
+<!-- manually encode abstract & toc to get order right -->
+
+```{=latex}
+\begin{abstract}
+```
 
 Fast evaluation of new hardware ideas is important for effective architectural research. Representative sampling techniques such as SimPoint assist in this by estimating performance metrics from simulations of a part of a program. It has been shown that these estimates can be very accurate when simulation intervals are sufficiently long. This thesis introduces a technique for combining short and long simulation intervals with ML parameter optimisation techniques to find optimal hardware configurations. Our main contributions include:
 
@@ -45,6 +49,12 @@ Fast evaluation of new hardware ideas is important for effective architectural r
 - Presenting an implementation that can find global maximal configurations for given SPEC benchmarks with X% less simulation time than traditional techniques
 
 The tools this thesis introduces will contribute to making architectural design space exploration cheaper and wide searches feasible in future research.
+
+```{=latex}
+\end{abstract}
+
+\tableofcontents
+```
 
 # Introduction
 
