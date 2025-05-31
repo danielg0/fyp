@@ -129,7 +129,9 @@ baseline/%/generated: bin/%
 	touch $@
 
 # collect regular intervals
-# tick value estimated from existing samples taken of 125000 instruction length intervals
+# tick value calculated from dividing total ticks executed by 1000 to get ~1000
+# checkpoints from across execution to pick randomly to start from
+CHECKPOINT_GAP = 2000000000
 BIG_NUMBER = 100000000000000000000000000000
 .PRECIOUS: regular/%/generated
 regular/%/generated: bin/%
@@ -138,6 +140,6 @@ regular/%/generated: bin/%
 		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./bin/$* --options='$(COREMARK_ARGS)' \
 		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
-		--take-checkpoints 45000000,45000000 --max-checkpoints $(BIG_NUMBER) \
+		--take-checkpoints $(CHECKPOINT_GAP),$(CHECKPOINT_GAP) --max-checkpoints $(BIG_NUMBER) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
