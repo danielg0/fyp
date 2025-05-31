@@ -51,7 +51,7 @@ for scale in args.scaleto:
 
 outfiles = [open(str(args.outdir) + "/" + str(n) + ".bb", "w") for n in args.scaleto]
 
-for bbv in args.infile.readlines():
+for bbv in args.infile:
     if not bbv.strip().startswith('T'):
         print("Comment line: " + bbv)
         continue

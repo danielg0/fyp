@@ -59,7 +59,7 @@ print(args)
 simpoints = []
 simpoint_line = re.compile(r"^(\d+) (\d+)\.(\d+)$")
 simpoint_id = re.compile(r".+simpoint_(\d+)_.+")
-for simpoint in args.inPoints.readlines():
+for simpoint in args.inPoints:
     match = simpoint_line.match(simpoint)
     if match is None:
         print("Couldn't match line in in points: '" + simpoint + "'")

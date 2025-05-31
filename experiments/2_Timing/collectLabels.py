@@ -51,7 +51,7 @@ points = {}
 
 weight = re.compile(r"^([+\-e.0-9]+) (\d+)$")
 # gather cluster weights
-for line in args.inWeights.readlines():
+for line in args.inWeights:
     match = weight.match(line)
     if match is None:
         print("Error: couldn't parse weight '" + line + "'")
@@ -65,7 +65,7 @@ for line in args.inWeights.readlines():
 label = re.compile(r"^(\d+) ([+\-e.0-9]+)$")
 # track index of current line
 i = 0
-for line in args.inLabels.readlines():
+for line in args.inLabels:
     match = label.match(line)
     if match is None:
         print("Warning: Didn't match line '" + line + "'")
