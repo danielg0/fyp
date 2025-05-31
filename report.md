@@ -54,6 +54,7 @@ The tools this thesis introduces will contribute to making architectural design 
 \end{abstract}
 
 \tableofcontents
+% \listoffigures
 ```
 
 # Introduction
@@ -325,7 +326,9 @@ Our approach to generate a set of BBV arrays given a set of output intervals, $i
 
 In the optimal configuration, where the input interval size is a factor of every output interval size, we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval. We also require less simulation time with our approach, using a constant amount of compute with respect to the number of target intervals.
 
-For non-optimal configurations of intervals we add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. This does not add much simulation cost to the overall generation \todo{Plot this} as the interval size does not have a large impact on overall simulation time.
+For non-optimal configurations of intervals we add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. We posit this does not add much simulation cost to the overall generation as the interval size does not have a large impact on overall simulation time. To test this hypothesis, we took the `zip` benchmark from the CoreMark-PRO suite [@coremarkpro] and collected BBV arrays for several interval sizes using Gem5 [@gem5], measuring the user CPU time spent gathering each one (for further details on our methodology and test machine see {@sec:methodology}).
+
+![A plot of the CPU time taken to generate ](experiments/4_simcostofintervalwidth/plots/cpu_user_time_vs_interval_width.svg)
 
 <!--
 ## Sub-sampling
@@ -337,15 +340,19 @@ Let a BBV of width $2N$, $B^{2N}_{ab} = \{3, 0, 6, \ldots\}$, contain the number
 $$B^N_a = \left\lceil {B^{2N}_{ab} \over 2} \right\rceil \qquad B^N_b = \left\lfloor {B^{2N}_{ab} \over 2} \right\rfloor$$
 -->
 
-## Sub-Sampling through Checkpoint Truncation
+## Sub-Sampling using Checkpoint Truncation
 
 Collecting an array of BBVs for a fresh interval size requires simulating the entire program. Even though this can be done with a functional simulator, it still takes a significant amount of time for large programs. Our super-sampling approach requires we collect an array of BBVs for the smallest sized interval we want to simulate with. We now introduce a method for doing SimPoint analysis with an existing set of SimPoint checkpoints built on a large interval size, such as the several million instruction wide interval sizes commonly used in existing SimPoint research [@simpoint1; @power-simpoint; @dagguise].
 
-Take a BBV of width $N$, $B^{N}_{ab} = \{3, 0, 6, \ldots\}$, containing the number of instructions executed from two continuous intervals $a$ and $b$ of length $N \over 2$. We have no way to determine the exact split of instructions between the two intervals, but we can estimate it by dividing the instructions equally between $a$ and $b$. This creates two new smaller BBVs of width $N \over 2$, $B^{N \over 2}_a$ and $B^{N \over 2}_b$, both equal to $\{1.5, 0, 3, \ldots\}$. This approach generalises to any scaling factor $f$, where $0 < f < N$ - we can create $f$ smaller BBVs of width $N \over f$ by dividing each component of $B^{N}$ by $f$.
+Take a BBV of width $N$, $B^{N}_{ab} = \{3, 0, 6, \ldots\}$, containing the number of instructions executed from two continuous intervals $a$ and $b$ of length $N \over 2$. We have no way to determine the exact split of instructions between the two intervals, but we can estimate it by dividing the instructions executed from each basic block equally between $a$ and $b$. This creates two new smaller BBVs of width $N \over 2$, $B^{N \over 2}_a$ and $B^{N \over 2}_b$, both equal to $\{1.5, 0, 3, \ldots\}$. This approach generalises to any scaling factor $f$, where $0 < f < N$ - we can create $f$ smaller BBVs of width $N \over f$ by dividing each component of $B^{N}$ by $f$.
 
-This process does not have an effect on the final clustering. Take a clustering of points $p_1, p_2, \ldots$
+Dividing BBVs equally this way does not have an effect on the stability of the $k$-means clustering of the BBVs. Recall from {@sec:k-means-clustering} that the $k$-means clustering algorithm is repeated until there is no change in cluster membership after calculating the centre of each cluster - the mean average position of each BBV in the cluster - and assigning each BBV to its closest centre.
 
-![An illustration of how scaling every BBV by a constant factor does not affect the generated $k$-means clustering of the space.](./diagrams/clustering_scaling.drawio.svg){#fig:clustering_scaling}
+Consider {@fig:clustering_scaling} - take a clustering of points $p_1, p_2, \ldots$ that form
+
+![An illustration of how scaling every BBV by a constant factor does not affect the stability of a $k$-means clustering of the space. Crosses represent the initial BBVs, pluses the scaled BBVs and the green circle is the cluster found through $k$-means clustering. The BBV in red is the one slected as the SimPoint for that cluster.](./diagrams/clustering_scaling.drawio.svg){#fig:clustering_scaling}
+
+Therefore, applying a scaling factor $f$ to each node and sampling the new closest BBV to each centre is equivalent to sampling a $1 \over f$ instruction long subset of the SimPoint picked by running $k$-means clustering on the original BBV array. Which subset is picked is arbitrary, so we pick . This enables us to reuse the checkpoints gathered 
 
 This approach has the downside of obscuring periodic behaviour that occurs over time-spans within the original interval size but wider than the sub-sampled interval size. Periodic behaviour that occurs over time-spans greater than the original is identified through the clustering process of the original SimPoint process, during which checkpoints are created for the different phases. However, for periodic behaviour occurring entirely within an interval size's worth of instructions, a subset of the beginning of that interval may not encounter all phases of the behaviour, leading to greater metric approximation errors.
 
@@ -354,8 +361,6 @@ This approach has the downside of obscuring periodic behaviour that occurs over 
 ## Methodology
 
 ![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
-
-## Methodology
 
 ## Results
 
