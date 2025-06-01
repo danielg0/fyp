@@ -1,4 +1,4 @@
-benchmark,interval,cluster,index,cpi,ipc
+benchmark,interval,cluster,cpi,ipc
 zip,125000,1,2.945056,0.339552
 zip,125000,2,0.343203,2.913730
 zip,125000,3,1.229238,0.813512

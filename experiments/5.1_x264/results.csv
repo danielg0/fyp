@@ -1,4 +1,4 @@
-benchmark,interval,cluster,index,cpi,ipc
+benchmark,interval,cluster,cpi,ipc
 spec.x264,125000,1,0.484276,2.064939
 spec.x264,125000,2,0.359623,2.780692
 spec.x264,125000,3,0.487576,2.050961

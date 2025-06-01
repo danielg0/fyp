@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Output csv headers
-echo benchmark,interval,cluster,index,cpi,ipc
+echo benchmark,interval,cluster,cpi,ipc
 
 # Find every stat in the out folder
 for statfile in $(find out/ -name "stats.txt")
