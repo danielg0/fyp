@@ -14,8 +14,9 @@ do
 			cpi=$(grep "system.cpu.cpi" $p/stats.txt | awk '{print $2;}')
 			ipc=$(grep "system.cpu.ipc" $p/stats.txt | awk '{print $2;}')
 		else
-			echo ERROR: $p
-			exit -1
+			echo ERROR: $p > /dev/stderr
+			cpi=
+			ipc=
 		fi
 	else
 		cpi=$(grep "switch_cpus\.cpi" $p/stats.txt | tail -n 1 | awk '{print $2;}')
