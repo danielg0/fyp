@@ -57,7 +57,7 @@ out/%/generated:
 		--work-folder $(R)/$(@D) --target-width $(*F) \
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
 			-c ./$(BINARY.$(*D)) --options='$(FLAGS.$(*D))' \
-			--cpu-type=O3CPU $(GEM5_MEMORY) \
+			--cpu-type=ArmO3CPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
 
