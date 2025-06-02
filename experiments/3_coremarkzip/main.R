@@ -14,7 +14,7 @@ variance <- (data %>% group_by(benchmark, interval, cluster) %>% summarise(cpi_v
 mean_variance <- (variance %>% group_by(interval) %>% summarise(cpi_mean = mean(cpi_var, na.rm = TRUE), ipc_mean = mean(ipc_var, na.rm = TRUE)))
 
 # be AWARE of the filter occurring here
-variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_var)) +
+variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_var, colour=benchmark)) +
 
 #	geom_violin(scale = "width") +
 #	geom_hline(aes(yintercept = ipc_mean), mean_variance, colour = "red") +
@@ -37,13 +37,23 @@ variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_v
 ggsave("plots/variance_by_interval_ipc.svg", width=10, height=5)
 
 # calculate weighted average
-selected <- filter(data, index == 0)
+selected <- (filter(data, index == 0) %>%
+# interval used for simulation interval (ie. the number of instructions executed)
+# width is the group of weights we should use
+# add on subsampled data
+	mutate(source = "Super-sample", width = interval) %>%
+# fix off-by-one in data. output folders use one-indexed gem5 checkpoint id and weights use zero-index simpoint cluster
+	bind_rows(read_csv("../5_downsampling/results.csv") %>% mutate(cluster = cluster - 1, source = "Truncated", width = 4000000)) %>%
+	bind_rows(read_csv("../5.1_x264/results.csv")       %>% mutate(cluster = cluster - 1, source = "Truncated", width = 4000000)))
+
 weights <- read_csv("simpoints/weights.csv")
 spec_weights <- read_csv("../2.1_test/simpoints/weights.csv")
 weights <- bind_rows(weights, filter(spec_weights, benchmark == "spec.x264"))
+# rename interval column as width
+weights <- (mutate(weights, width = interval) %>% select(!interval))
 
-estimates <- selected %>% select(benchmark, interval, cluster, cpi, ipc) %>%
-	full_join(weights) %>% group_by(benchmark, interval) %>%
+estimates <- selected %>% select(benchmark, interval, source, width, cluster, cpi, ipc) %>%
+	full_join(weights) %>% group_by(benchmark, interval, source) %>%
 	summarise(weighted_cpi = sum(cpi * weight), weighted_ipc = sum(ipc * weight))
 
 # get baseline to compare to
@@ -57,7 +67,8 @@ error <- baseline %>% full_join(estimates, by = join_by(benchmark)) %>%
 	       cpi_percent_error = cpi_error / real_cpi,
 	       ipc_percent_error = ipc_error / real_ipc)
 
-ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark)) +
+ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark, linetype = source)) +
+	geom_vline(xintercept=4000000, linetype="dotted") +
 	geom_point() + geom_line() +
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
 	scale_x_continuous(labels = scales::label_comma()) +
