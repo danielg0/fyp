@@ -26,6 +26,8 @@ header-includes:
     %% Multicolumn sections
     \usepackage{multicol}
 
+    \usepackage{pifont}
+
     %% Included to make secnos work
     \usepackage{hyperref}
     \usepackage{cleveref}
@@ -328,7 +330,9 @@ In the optimal configuration, where the input interval size is a factor of every
 
 For non-optimal configurations of intervals we add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. We posit this does not add much simulation cost to the overall generation as the interval size does not have a large impact on overall simulation time. To test this hypothesis, we took the `zip` benchmark from the CoreMark-PRO suite [@coremarkpro] and collected BBV arrays for several interval sizes using Gem5 [@gem5], measuring the user CPU time spent gathering each one (for further details on our methodology and test machine see {@sec:methodology}).
 
-![A plot of the CPU time taken to generate ](experiments/4_simcostofintervalwidth/plots/cpu_user_time_vs_interval_width.svg)
+Our results are plotted in {@fig:cputime-vs-interval-plot}, which show there is not a large cost to decreasing the width of collected BBVs. A reduction in interval size from 4 million instructions to 0.5 million, creating octuple the number of BBVs, increased simulation time by 541 seconds, a rise of 8.56% (3sf.).
+
+![A plot of the CPU time taken to simulate and output a BBV array for the `zip` benchmark from [@coremarkpro] using Gem5 [@gem5] for a range of BBV widths](experiments/4_simcostofintervalwidth/plots/cpu_user_time_vs_interval_width.svg){#fig:cputime-vs-interval-plot}
 
 <!--
 ## Sub-sampling
@@ -346,13 +350,19 @@ Collecting an array of BBVs for a fresh interval size requires simulating the en
 
 Take a BBV of width $N$, $B^{N}_{ab} = \{3, 0, 6, \ldots\}$, containing the number of instructions executed from two continuous intervals $a$ and $b$ of length $N \over 2$. We have no way to determine the exact split of instructions between the two intervals, but we can estimate it by dividing the instructions executed from each basic block equally between $a$ and $b$. This creates two new smaller BBVs of width $N \over 2$, $B^{N \over 2}_a$ and $B^{N \over 2}_b$, both equal to $\{1.5, 0, 3, \ldots\}$. This approach generalises to any scaling factor $f$, where $0 < f < N$ - we can create $f$ smaller BBVs of width $N \over f$ by dividing each component of $B^{N}$ by $f$.
 
-Dividing BBVs equally this way does not have an effect on the stability of the $k$-means clustering of the BBVs. Recall from {@sec:k-means-clustering} that the $k$-means clustering algorithm is repeated until there is no change in cluster membership after calculating the centre of each cluster - the mean average position of each BBV in the cluster - and assigning each BBV to its closest centre.
+Dividing BBVs equally this way has a similar proportional effect on the $k$-means clustering of the BBVs. Recall from {@sec:k-means-clustering} that the $k$-means clustering algorithm is repeated until there is no change in cluster membership after calculating the centre of each cluster - the mean average position of each BBV in the cluster - and assigning each BBV to its closest centre. We label these terminating clusters stable - stable clusters are those where every vector is a member of the cluster closest to it and each cluster has its centre equal to the average position of every vector assigned to it.
+
+Let $C = \{c_0, c_1, \ldots, c_s\}$ be a $k$-means clustering of size $s > 0$, where each cluster is made up of some number of points $c_i = \{p_{i.0} \ldots p_{i.|c_i|}\}, |c_i| > 0$. Assume this cluster is stable (as in {@fig:clustering_scaling} \ding{172}). The centre of a cluster $c_i$ is given by.
+
+$$\sum{p_0, \ldots, p_{|c_i|}} \over |c_i|$$
+
+Now, take an arbitrary scaling factor $f \in \mathbb{Z}, f > 0$ and create a new set of points by multiplying each existing point by $1 \over f$ and creating $f$ new points at that location.
 
 Consider {@fig:clustering_scaling} - take a clustering of points $p_1, p_2, \ldots$ that form
 
 ![An illustration of how scaling every BBV by a constant factor does not affect the stability of a $k$-means clustering of the space. Crosses represent the initial BBVs, pluses the scaled BBVs and the green circle is the cluster found through $k$-means clustering. The BBV in red is the one slected as the SimPoint for that cluster.](./diagrams/clustering_scaling.drawio.svg){#fig:clustering_scaling}
 
-Therefore, applying a scaling factor $f$ to each node and sampling the new closest BBV to each centre is equivalent to sampling a $1 \over f$ instruction long subset of the SimPoint picked by running $k$-means clustering on the original BBV array. Which subset is picked is arbitrary, so we pick . This enables us to reuse the checkpoints gathered 
+Therefore, applying a scaling factor $f$ to each node and sampling the new closest BBV to each scaled cluster centre is equivalent to sampling a $1 \over f$ instruction long subset of the SimPoint picked by running $k$-means clustering on the original unscaled BBV array. The subset picked is arbitrary, so we pick the initial $1 \over f$ instructions at the beginning of the interval. This enables us to reuse the checkpoints gathered originally for the unscaled BBVs.
 
 This approach has the downside of obscuring periodic behaviour that occurs over time-spans within the original interval size but wider than the sub-sampled interval size. Periodic behaviour that occurs over time-spans greater than the original is identified through the clustering process of the original SimPoint process, during which checkpoints are created for the different phases. However, for periodic behaviour occurring entirely within an interval size's worth of instructions, a subset of the beginning of that interval may not encounter all phases of the behaviour, leading to greater metric approximation errors.
 
