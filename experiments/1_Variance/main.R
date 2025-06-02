@@ -2,6 +2,10 @@ library(tidyverse)
 library(ggthemes)
 library(scales)
 
+library(showtext)
+font.add("Latin Modern Roman", "/usr/share/fonts/OTF/lmroman12-regular.otf")
+showtext.auto()
+
 data <- read_csv("results/data.csv")
 variance <- (data %>% group_by(benchmark, interval, cluster) %>% summarise(cpi_var = var(cpi), len = length(cpi), ipc_var = var(ipc)))
 mean_variance_cpi <- (variance %>% group_by(interval) %>% summarise(mean = mean(cpi_var, na.rm = TRUE)))
@@ -16,7 +20,7 @@ variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_v
 	scale_x_continuous(breaks = c()) +
 	facet_grid(cols = vars(interval), labeller = labeller(interval = \(xs)label_comma()(map_vec(xs, as.integer)))) +
 	labs(x = "Interval Size (instructions)", y = "Variance of Cluster Point's IPC") +
-	theme_few() + scale_colour_few()
+	theme_few(base_family="Latin Modern Roman") + scale_colour_few()
 
 ggsave("plots/variance_by_interval.svg", width=10, height=5)
 
@@ -40,5 +44,5 @@ ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark)) +
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
 	scale_x_continuous(labels = scales::label_comma()) +
 	labs(x = "Interval Width (instructions)", y = "IPC Error", colour = "Benchmark") +
-	theme_few() + scale_colour_few()
+	theme_few(base_family="Latin Modern Roman") + scale_colour_few()
 ggsave("plots/ipc_error_by_interval.svg", width=10, height=5)
