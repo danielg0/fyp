@@ -350,19 +350,48 @@ Collecting an array of BBVs for a fresh interval size requires simulating the en
 
 Take a BBV of width $N$, $B^{N}_{ab} = \{3, 0, 6, \ldots\}$, containing the number of instructions executed from two continuous intervals $a$ and $b$ of length $N \over 2$. We have no way to determine the exact split of instructions between the two intervals, but we can estimate it by dividing the instructions executed from each basic block equally between $a$ and $b$. This creates two new smaller BBVs of width $N \over 2$, $B^{N \over 2}_a$ and $B^{N \over 2}_b$, both equal to $\{1.5, 0, 3, \ldots\}$. This approach generalises to any scaling factor $f$, where $0 < f < N$ - we can create $f$ smaller BBVs of width $N \over f$ by dividing each component of $B^{N}$ by $f$.
 
-Dividing BBVs equally this way has a similar proportional effect on the $k$-means clustering of the BBVs. Recall from {@sec:k-means-clustering} that the $k$-means clustering algorithm is repeated until there is no change in cluster membership after calculating the centre of each cluster - the mean average position of each BBV in the cluster - and assigning each BBV to its closest centre. We label these terminating clusters stable - stable clusters are those where every vector is a member of the cluster closest to it and each cluster has its centre equal to the average position of every vector assigned to it.
+Dividing BBVs equally this way has a similar proportional effect on the $k$-means clustering of the BBVs. Recall from {@sec:k-means-clustering} that the $k$-means clustering algorithm is repeated until there is no change in cluster membership after calculating the centre of each cluster - the mean average position of each BBV in the cluster - and assigning each BBV to its closest centre. We label these terminating clusters stable - stable clusters are those where every vector is a member of the cluster closest to it and each cluster has its centre equal to the average position of every vector assigned to it. We will now show that given a stable clustering, scaling the points in that clustering forms a scaled clustering that is stable. We will then show that the closest point to each cluster's centre, the one selected as that cluster's SimPoint, remains the same after scaling.
 
-Let $C = \{c_0, c_1, \ldots, c_s\}$ be a $k$-means clustering of size $s > 0$, where each cluster is made up of some number of points $c_i = \{p_{i.0} \ldots p_{i.|c_i|}\}, |c_i| > 0$. Assume this cluster is stable (as in {@fig:clustering_scaling} \ding{172}). The centre of a cluster $c_i$ is given by.
+![An illustration of how scaling every BBV by a constant factor does not affect the stability of a $k$-means clustering of the space. Crosses represent the initial BBVs, the pluses represent the overlapping scaled BBVs and the green circle is the cluster found through $k$-means clustering. The BBV in red is the one slected as the SimPoint for that cluster.](./diagrams/clustering_scaling.drawio.svg){#fig:clustering_scaling}
 
-$$\sum{p_0, \ldots, p_{|c_i|}} \over |c_i|$$
-
-Now, take an arbitrary scaling factor $f \in \mathbb{Z}, f > 0$ and create a new set of points by multiplying each existing point by $1 \over f$ and creating $f$ new points at that location.
-
-Consider {@fig:clustering_scaling} - take a clustering of points $p_1, p_2, \ldots$ that form
-
-![An illustration of how scaling every BBV by a constant factor does not affect the stability of a $k$-means clustering of the space. Crosses represent the initial BBVs, pluses the scaled BBVs and the green circle is the cluster found through $k$-means clustering. The BBV in red is the one slected as the SimPoint for that cluster.](./diagrams/clustering_scaling.drawio.svg){#fig:clustering_scaling}
+> Take an arbitrary $k$-means clustering of vectors $\mathbb{C}$ and assume that it is stable, as in {@fig:clustering_scaling}\medspace\ding{172}. Each cluster $C \in \mathbb{C}$ has a non-empty multiset of member vectors ${C = \{v_1, v_2, \ldots, v_{|C|}\}}$ each of cardinality $B$, the number of basic blocks in the program, and each cluster $C$ also has a centre $c = [c_1, c_2, \ldots, c_B]$, given by:
+> $$c = {v_1 + v_2 + \ldots + v_{|C|} \over {|C|} }$$
+> Let the closest vector in $C$ to the centre $c = [c_1, c_2, \ldots, c_B]$ be $v^\star = [i^\star_1, i^\star_2, \ldots, i^\star_B]$. There is no point $v \in C \setminus \{v^\star\}$ with components $v = [i_1, i_2, \ldots, i_B]$, such that:
+> $$\begin{aligned} |v - c| &< |v^\star - c| \\
+\sqrt{(i^{\empty}_1 - c_1)^2 + (i_2 - c_2)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{(i^\star_1 - c_1)^2 + (i^\star_2 - c_2)^2 + \ldots + (i^\star_B - c_B)^2} \end{aligned}$$
+> As the clustering is stable, each point is assigned to its closest centre. That is to say, for some point $v$ in a cluster $C \in \mathbb{C}$ with centre $c$, there is no other cluster $C' \in \mathbb{C} \setminus \{C\}$ with centre $c'$ such that:
+> $$|v - c'| < |v - c|$$
+> Then, for arbitrary factor $f > 0$, scale every vector by $1 \over f$ to produce $f$ new vectors, like {@fig:clustering_scaling}\medspace\ding{173}, where each plus represents $f$ overlapping basic block vectors:
+> $$\begin{aligned} w_{1.1}, w_{1.2}, \ldots, w_{1.f} &= {v_1 \over f} = \left[{i_0 \over f}, {i_1 \over f}, \ldots, {i_B \over f}\right] \\
+w_{2.1}, w_{2.2}, \ldots, w_{2.f} &= {v_2 \over f} \\
+&\ldots \end{aligned}$$
+> Create a new set of clusters $D \in \mathbb{D}$, assigning each new vector to the same multiset cluster its original vector was a part of:
+> $$v_1 \in C_i \quad \Rightarrow \quad \{w_{1.1}, w_{1.2}, \ldots, w_{1.f}\} \subseteq D_i$$
+> Therefore, the size of each new cluster $|D_i| = f|C_i|$. We can calculate the centre of each new cluster $D \in \mathbb{D}$, $d$, and express it in terms of the centre of its original, $c$, as follows:
+> $$\begin{aligned} d &= {w_{1.1} + \ldots + w_{1.f} + w_{2.1} + \ldots + w_{2.f} + \ldots + w_{{|C|}.f} \over |D_i|} \\
+& \textnormal{Substitute each scaled term }w_{m.n}\textnormal{ for }{v_m \over f}: \\
+\Rightarrow \quad d &= {\overbrace{{v_1 \over f} + \ldots + {v_1 \over f}}^{f\textnormal{ terms}} + \overbrace{{v_2 \over f} + \ldots + {v_2 \over f}}^{f\textnormal{ terms}} + \ldots + \overbrace{{v_{|C|} \over f} + \ldots + {v_{|C|} \over f}}^{f\textnormal{ terms}} \over f|C_i|} \\
+\Rightarrow \quad d &= {v_1 + v_2 + \ldots + v_{|C|} \over f|C_i|} = {1 \over f}{v_1 + v_2 + \ldots + v_{|C|} \over |C_i|} = {c \over f}\\
+\end{aligned}$$
+> Let $w^\star \in D$ be one member of the group of vectors scaled down from $v^\star \in C$, they are all equal, so $w^\star = {v^\star \over f} = [j^\star_1, j^\star_2, \ldots, j^\star_B]$. We will now show by contradiction that $w^\star$ is the vector that is closest to its assigned cluster's centre, $d$.
+> $$\begin{aligned} \textnormal{Assume a vector }w \in C \setminus &\{w^\star\} \textnormal{ is closer to }d\textnormal{ than }w^\star\textnormal{:} \\
+|w - d| &< |w^\star - d| \\
+\Rightarrow \quad \left|w - {c \over f}\right| &< \left|w^\star - {c \over f}\right| \\
+\Rightarrow \quad \sqrt{\left(j_1 - {c_1 \over f}\right)^2 + \ldots + \left(j_B - {c_B \over f}\right)^2} &< \sqrt{\left(j^\star_1 - {c_1 \over f}\right)^2 + \ldots + \left(j^\star_B - {c_B \over f}\right)^2} \\
+\textnormal{Substitute } j_i \textnormal{ and } j^\star_i \textnormal{ for } &\textnormal{corresponding scaled-up } {i_i \over f} \textnormal { and } {i^\star_i \over f}\textnormal{:} \\
+\Rightarrow \quad \sqrt{\left({i_1 \over f} - {c_1 \over f}\right)^2 + \ldots + \left({i_B \over f} - {c_B \over f}\right)^2} &< \sqrt{\left({i^\star_1 \over f} - {c_1 \over f}\right)^2 + \ldots + \left({i^\star_B \over f} - {c_B \over f}\right)^2} \\
+\Rightarrow \quad \sqrt{1\over f^2}\sqrt{(i_1 - c_1)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{1 \over f^2}\sqrt{(i^\star_1 - c_1)^2 + \ldots + (i^\star_B - c_B)^2} \\
+\Rightarrow \quad \sqrt{(i_1 - c_1)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{(i^\star_1 - c_1)^2 + \ldots + (i^\star_B - c_B)^2} \\
+\Rightarrow \quad |v - c| &< |v^\star - c| \end{aligned}$$
+> This contradicts with $v^\star$ being the closest vector to its cluster's centre $c$, so reject our assumption that there exists a $w$ closer to $d$ than $w^\star$ and instead take that $w^\star$ is the closest vector to $d$.
+>
+> Similarly, we can show that the clustering is stable with a proof by contradiction. Assume that one of the new scaled vectors assigned to $D$ is closer to a new cluster $D' \in \mathbb{D} \setminus \{D\}$ than $D$. Use this to show that the corresponding original vector would also be closter to $C$ than $C'$. This contradicts with the original being stable, so the new cluster $D$ must also be stable.
+>
+> Combining these properties, we have shown that $\mathbb{D}$ is a stable clustering of the vectors in $\mathbb{C}$ scaled by factor $f$, where the closest vectors to each cluster's centre - the SimPoint picked to represent that cluster - in $\mathbb{D}$ are those scaled from the vector closest to the corresponding cluster in $\mathbb{C}$. This is visualised in {@fig:clustering_scaling}\medspace\ding{174}.
 
 Therefore, applying a scaling factor $f$ to each node and sampling the new closest BBV to each scaled cluster centre is equivalent to sampling a $1 \over f$ instruction long subset of the SimPoint picked by running $k$-means clustering on the original unscaled BBV array. The subset picked is arbitrary, so we pick the initial $1 \over f$ instructions at the beginning of the interval. This enables us to reuse the checkpoints gathered originally for the unscaled BBVs.
+
+Checkpoints gathered using Gem5 [@gem5] are saved to a folder whose name follows the pattern `cpt.simpoint_XX_inst_XX_weight_XX_interval_XX_warmup_XX`, where the `XX` after each configuration variable holds the value of that attribute for that checkpoint. By creating a copy or making a symbolic link to a collected checkpoint with a large width (eg. `...interval_1000000_...`) and renaming that folder to a smaller width (eg. `...interval_250000_...`), Gem5 will stop simulating that checkpoint earlier.
 
 This approach has the downside of obscuring periodic behaviour that occurs over time-spans within the original interval size but wider than the sub-sampled interval size. Periodic behaviour that occurs over time-spans greater than the original is identified through the clustering process of the original SimPoint process, during which checkpoints are created for the different phases. However, for periodic behaviour occurring entirely within an interval size's worth of instructions, a subset of the beginning of that interval may not encounter all phases of the behaviour, leading to greater metric approximation errors.
 
