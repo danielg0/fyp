@@ -70,8 +70,9 @@ for simpoint in args.inPoints.readlines():
         index = match.group(3)
 
         # attempt to find matching unique checkpoint
-        inst = str(max((offset * args.width) - args.warmup, 0))
-        search = [f for f in args.checkpointdir.glob("cpt.*_inst_" + inst + "_*")]
+        inst = max((offset * args.width) - args.warmup, 0)
+        warmup = "0" if inst < args.warmup else str(args.warmup)
+        search = [f for f in args.checkpointdir.glob("cpt.*_inst_" + str(inst) + "_*_warmup_" + warmup)]
         if len(search) == 0:
             print("Couldn't find checkpoint for: '" + simpoint + "'")
             sys.exit(-1)

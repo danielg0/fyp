@@ -1,9 +1,9 @@
-GEM5 = ~/gem5/gem5/build/X86/gem5.opt
-GEM5_CONFIG_FILE = ~/gem5/gem5/configs/deprecated/example/se.py
+GEM5 = ~/gem5/build/X86/gem5.opt
+GEM5_CONFIG_FILE = ~/gem5/configs/deprecated/example/se.py
 SIMPOINT = ~/simpoint/bin/simpoint
 TIME = /usr/bin/time
 
-BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha zip
+BENCHMARKS = cjpeg core linear loops nnet parser radix2 sha#zip
 COREMARK_ARGS = -v0 -c1 -w1 -i10
 
 PROFILED_BBV_SIZE = 1000
