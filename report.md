@@ -28,6 +28,9 @@ header-includes:
 
     \usepackage{pifont}
 
+    %% make sure footnotes don't wrap to the next page
+    \interfootnotelinepenalty=10000
+
     %% Included to make secnos work
     \usepackage{hyperref}
     \usepackage{cleveref}
@@ -326,13 +329,17 @@ Our approach to generate a set of BBV arrays given a set of output intervals, $i
     a. Add this iteration's BBV to each mutable BBV and add $i_0$ to each instruction counter
     b. For each interval whose instruction counter equals its interval size, append its mutable BBV to its BBV array and reset that intervals counter and mutable BBV
 
-In the optimal configuration, where the input interval size is a factor of every output interval size, we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval. We also require less simulation time with our approach, using a constant amount of compute with respect to the number of target intervals.
+In the optimal configuration, where the input interval size is a factor of every output interval size, we produce BBVs identical to those that would have been produced if we had done separate simulations for each interval[^gem5_asterisk]. We also require less simulation time with our approach, using a constant amount of compute with respect to the number of target intervals.
 
 For non-optimal configurations of intervals we add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. We posit this does not add much simulation cost to the overall generation as the interval size does not have a large impact on overall simulation time. To test this hypothesis, we took the `zip` benchmark from the CoreMark-PRO suite [@coremarkpro] and collected BBV arrays for several interval sizes using Gem5 [@gem5], measuring the user CPU time spent gathering each one (for further details on our methodology and test machine see {@sec:methodology}).
 
 Our results are plotted in {@fig:cputime-vs-interval-plot}, which show there is not a large cost to decreasing the width of collected BBVs. A reduction in interval size from 4 million instructions to 0.5 million, creating octuple the number of BBVs, increased simulation time by 541 seconds, a rise of 8.56% (3sf.).
 
 ![A plot of the CPU time taken to simulate and output a BBV array for the `zip` benchmark from [@coremarkpro] using Gem5 [@gem5] for a range of BBV widths](experiments/4_simcostofintervalwidth/plots/cpu_user_time_vs_interval_width.svg){#fig:cputime-vs-interval-plot}
+
+The super-sampling process we have described here creates BBV arrays of a variety of interval sizes from a single profiling with no loss in accuracy compared to the standard SimPoint approach. This saves computation time profiling the same binary multiple times.
+
+[^gem5_asterisk]: In our experimentation, we noticed that when profiling with Gem5 [@gem5], the number of instructions covered (ie. the sum of all the components) by the BBVs it output would exceed or fall short of the target interval size by a couple instructions. This is unlikely to affect the accuracy of the SimPoint process, but does cause upscaled BBV arrays to not exactly match those generated directly.
 
 <!--
 ## Sub-sampling
@@ -393,11 +400,28 @@ Therefore, applying a scaling factor $f$ to each node and sampling the new close
 
 Checkpoints gathered using Gem5 [@gem5] are saved to a folder whose name follows the pattern `cpt.simpoint_XX_inst_XX_weight_XX_interval_XX_warmup_XX`, where the `XX` after each configuration variable holds the value of that attribute for that checkpoint. By creating a copy or making a symbolic link to a collected checkpoint with a large width (eg. `...interval_1000000_...`) and renaming that folder to a smaller width (eg. `...interval_250000_...`), Gem5 will stop simulating that checkpoint earlier.
 
-This approach has the downside of obscuring periodic behaviour that occurs over time-spans within the original interval size but wider than the sub-sampled interval size. Periodic behaviour that occurs over time-spans greater than the original is identified through the clustering process of the original SimPoint process, during which checkpoints are created for the different phases. However, for periodic behaviour occurring entirely within an interval size's worth of instructions, a subset of the beginning of that interval may not encounter all phases of the behaviour, leading to greater metric approximation errors.
+Reusing checkpoints this way saves considerable time simulating an entire program in order to gather checkpoints, making evaluation of configurations with a range of intervals more viable.
+
+This approach has the downside of potentially obscuring periodic behaviour that occurs over time-spans within the original interval size but wider than the sub-sampled interval size. Periodic behaviour that occurs over time-spans greater than the original is identified through the clustering process of the original SimPoint process, during which checkpoints are created for the different phases. However, for periodic behaviour occurring entirely within an interval size's worth of instructions, a subset of the beginning of that interval may not encounter all phases of the behaviour, leading to greater metric approximation errors.
 
 # The Behaviour of SimPoint sets
 
+In {@sec:generating-basic-block-vectors} we introduced two techniques for efficiently creating sets of SimPoints of different interval sizes. One takes a set of basic block vectors collected for a small interval size and scales it up to larger sizes that are a factor of the initial interval, saving profiling time. The second takes checkpoints collected for a large interval size and truncates the time they are run for in order to estimate the SimPoints that would be picked for a smaller intervals. This chapter explores the behaviour and error rate of a set of SimPoints collected using these methods on benchmarks from the CoreMark-PRO [@coremarkpro] and SPECCPU2017 [@speccpu2017] suites.
+
 ## Methodology
+
+These results are collected on a ...\todo{machine name?} with the following specification:
+
+|  |  |
+|--|--|
+| CPU: | AMD Ryzen 9 8945HS |
+| RAM: | 65 Gigabytes |
+| Storage: | 2 Terabyte Seagate FireCuda 520 NVMe SSD |
+| OS: | Fedora Version 42 |
+
+x86 binaries are build with GCC 15.1.1 (installed through `dnf` package manager), ARM binaries are built with GCC 15.1.0, cross-compiled using crosstool-NG v1.27.
+
+![Benchmark Binary](/home/danielg/External/tempdiagram.svg)
 
 ![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
 
@@ -406,6 +430,7 @@ This approach has the downside of obscuring periodic behaviour that occurs over 
 # Future Work
 
 - Incorporating BBV generation into Gem5
+- Could Gem5 output stats periodically rather than just at the end (combine collecting IPC, etc. for the same checkpoint at different intervals).
 
 <!--
 # Project Plan
