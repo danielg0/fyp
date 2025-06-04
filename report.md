@@ -46,14 +46,16 @@ fignos-cleveref: true
 \begin{abstract}
 ```
 
-Fast evaluation of new hardware ideas is important for effective architectural research. Representative sampling techniques such as SimPoint assist in this by estimating performance metrics from simulations of a part of a program. It has been shown that these estimates can be very accurate when simulation intervals are sufficiently long. This thesis introduces a technique for combining short and long simulation intervals with ML parameter optimisation techniques to find optimal hardware configurations. Our main contributions include:
+Fast evaluation of new hardware ideas is important for effective research in processor microarchitecture. Simulations of benchmark programs are an important tool to achieve this and representative sampling techniques, such as SimPoint, accelerate this process by identifying subsets of the program that are representative of the whole execution. Previous work has shown that estimates of performance metrics gathered by simulating just those selected intervals can be very accurate if they are sufficiently long.
 
-- Investigating the trade-off between error and simulation time present when choosing a SimPoint set's interval size
-- Discussing techniques for sub-sampling and super-sampling existing SimPoint BBV arrays to generate arrays with different interval sizes
-- Demonstrating the viability of combining multiple SimPoint sets of different interval sizes with modern ML techniques for parameter optimisation to find performant configurations
-- Presenting an implementation that can find global maximal configurations for given SPEC benchmarks with X% less simulation time than traditional techniques
+This thesis introduces a technique for combining short and long simulation intervals with parameter optimisation methods from the ML domain to efficiently measure the effect of hardware changes. Our main contributions include:
 
-The tools this thesis introduces will contribute to making architectural design space exploration cheaper and wide searches feasible in future research.
+- Investigating the trade-off between error and simulation time present when choosing a simulation interval's size.
+- Discussing interval sub-sampling and super-sampling techniques to efficiently generate simulation intervals from individual profiling runs. We give results showing a Y% decrease in CPU time required to pick simulation points.
+- Demonstrating the viability of combining multiple simulation interval sets of different sizes with modern ML techniques for parameter optimisation to efficiently find performant configurations.
+- Presenting an implementation that can find the Pareto front of a design-space exploration experiment on a given SPEC benchmark with X% less simulation time than traditional techniques.
+
+The tools this thesis introduces will contribute to more efficient use of simulation time in microarchitecture research. It also empowers researchers to explore more avenues for performance gain by giving them tools to quickly evaluate a suite of ideas before delving further into those that show promise. Our discussions lay the path for future exploration into the variance of SimPoint sets, leading to more statistically rigorous architectural research\todo{this claim is possibly a bit of a stretch?}.
 
 ```{=latex}
 \end{abstract}
@@ -80,15 +82,25 @@ By combining the SimPoint approach with Bayesian optimisation, we will demonstra
 
 We then demonstrate our implementation of this approach on a subset of SPEC CPU 2017 [@speccpu2017], showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
 
+## Contributions
+
+## Technique Overview
+
 # Background
+
+This chapter provides an overview of the prerequisite knowledge required for this thesis. We discuss the microarchitecture simulation space, with a focus on Gem5 [@gem5], and then go into greater detail on the previous research done on sampling a program's execution in order to estimate performance metrics, leading up to the development of the SimPoint [@simpoint1] technique. Finally, we introduce Bayesian optimisation and discuss one implementation, HyperMapper [@hypermapper2], and the features it offers that make it suitable for hardware design-space exploration experiments.
 
 ## Simulators
 
-Fabricating new hardware is a long and expensive process, so simulators like gem5 [@gem5] and SimpleScalar [@simplescalar] are used to evaluate new microarchitecture designs. By running benchmark suites, collections of programs that are representative of common computing workloads, performance comparisons can be made with existing designs.
+Fabricating new hardware is a long and expensive process, so simulators like gem5 [@gem5] and SimpleScalar [@simplescalar] are used to evaluate new microarchitecture designs before they become silicon. By running benchmark suites, collections of programs that are representative of common computing workloads, performance comparisons can be made with existing designs.
 
 These simulators are both open-source, with their code and documentation available freely online. This makes it possible for researchers to extend them with novel hardware structures and examine the effects of these extensions on overall system performance.
 
 Both SimpleScalar and gem5 provide different CPU models that span a spectrum between:
+
+\todo{discuss more sims, simgen, spider}
+
+\todo{look at ml micro-archit ecture sims (tao)}
 
 - Fast functional simulators that emulate just the instruction set of a machine such as gem5's `AtomicCPU` and SimpleScalar's `sim-fast`, which can achieve simulation speeds of 6 MIPS[^mips] [@simplescalar, Table 1], whilst collecting information on the flow of execution.
 - Slower microarchitecture simulators that can track out-of-order scheduling, data hazards, functional units, cache hierarchies, etc. to produce accurate values for IPC[^ipc] when executing a given program. These cycle-accurate models include gem5's O3 model and SimpleScalar's `sim-outorder` which simulates at speeds of 0.3 MIPS.
@@ -306,6 +318,10 @@ The effectiveness of the SimPoints approach in accurately estimating performance
 
 Bayesian optimisation is an approach to determine the minimal value of a function with few evaluations of the function. Modern Bayesian optimisers [@hypermapper2] can work with multiple discrete or continuous parameters with constraints on their values. This makes them ideal for working with hardware parameters, where we want to limit exploration to designs that are feasible. They also have the ability for a user to pass in a prior distribution, representing preexisting knowledge about the problem space and where the optimal solution may exist that can be used to drive where we evaluate the function next.
 
+\todo{discuss gem5tune paper Jacky mentioned}
+
+### Hypermapper
+
 # Generating Basic Block Vectors
 
 The first step in building multiple sets of simpoints is collecting an array of basic block vectors (BBVs) (see {@sec:simpoint}) for each simulation interval $i_1, i_2, \ldots, i_N$ of interest. The gem5 simulator [@gem5] has the ability to generate BBVs from a functional simulation of a program for a single given target interval. We could repeat this simulation for each interval we want a set of simpoints for, requiring time linear with respect to $N$. This entails inefficiently simulating an identical program multiple times - we can instead take an existing BBV array and "super-sample" it to construct a BBV of a greater interval or "sub-sample" it to produce one of a smaller interval, without additional simulation. In this chapter, we will discuss methods for sub- and super-sampling BBV arrays and their trade offs. 
@@ -421,11 +437,30 @@ These results are collected on a ...\todo{machine name?} with the following spec
 
 x86 binaries are build with GCC 15.1.1 (installed through `dnf` package manager), ARM binaries are built with GCC 15.1.0, cross-compiled using crosstool-NG v1.27.
 
-![Benchmark Binary](/home/danielg/External/tempdiagram.svg)
+### Benchmark Selection
 
-![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
+\newpage
+
+```{=latex}
+\begin{multicols}{2}
+```
+### Checkpoint Collection
+
+```{=latex}
+\columnbreak
+```
+
+<!-- manually label and increment figure counter as image too big for it to appear normally? -->
+![](./diagrams/Methodology.drawio.svg)
+Figure 4.1: A diagram giving an overview of our collection methodology. 
+```{=latex}
+\addtocounter{figure}{1}
+\end{multicols}
+```
 
 ## Results
+
+![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
 
 # Future Work
 
