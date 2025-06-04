@@ -112,7 +112,7 @@ results/%/generated: simpoints/%.points checkpoints/%/generated
 		--outdir $(R)/$(@D) --warmup $(WARMUP) --width $(*F) \
 		-- $(GEM5) $(GEM5_CONFIG_FILE) \
 			-c ./bin/$(*D) --options='$(COREMARK_ARGS)' \
-			--cpu-type=O3CPU $(GEM5_MEMORY)
+			--cpu-type=O3CPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
 
@@ -129,10 +129,10 @@ baseline/%/generated: bin/%
 	touch $@
 
 # collect regular intervals
-# tick value calculated from dividing total ticks executed by 1000 to get ~1000
+# tick value calculated from dividing total ticks executed by 50 to get ~50
 # checkpoints from across execution to pick randomly to start from
-CHECKPOINT_GAP = 2000000000
-BIG_NUMBER = 100000000000000000000000000000
+CHECKPOINT_GAP = 200000000000
+MAX_CHECKPOINT = 75
 .PRECIOUS: regular/%/generated
 regular/%/generated: bin/%
 	mkdir -p $(@D)
@@ -140,6 +140,6 @@ regular/%/generated: bin/%
 		--outdir=$(R)/$(@D) $(GEM5_CONFIG_FILE) \
 		-c ./bin/$* --options='$(COREMARK_ARGS)' \
 		--cpu-type=AtomicSimpleCPU $(GEM5_MEMORY) \
-		--take-checkpoints $(CHECKPOINT_GAP),$(CHECKPOINT_GAP) --max-checkpoints $(BIG_NUMBER) \
+		--take-checkpoints $(CHECKPOINT_GAP),$(CHECKPOINT_GAP) --max-checkpoints $(MAX_CHECKPOINT) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
