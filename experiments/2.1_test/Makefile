@@ -38,12 +38,12 @@ SIMPOINT_N = 10
 
 .PHONY: experiment
 experiment: $(BENCHMARKS:%=%.experiment)
-%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated) baseline/%/generated regular/%/generated
+%.experiment: $(SCALED_BBV_SIZES:%=results/\%/%/generated) baseline/%/generated reg_results/%/generated
 	echo Experiment $* done
 
 .PHONY: clean
 clean:
-	rm -rf profiling/ $(BENCHMARKS:%=simpoints/%) checkpoints/ $(BENCHMARKS:%=baseline/%)
+	rm -rf profiling/ $(BENCHMARKS:%=simpoints/%) checkpoints/ $(BENCHMARKS:%=baseline/%) reg_results
 
 # collecting initial bbvs (% is a benchmark name with no /)
 .PRECIOUS: profiling/%/simpoint.bb.gz
@@ -138,5 +138,16 @@ regular/%/generated: bin/%
 		-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
 		--cpu-type=ArmAtomicSimpleCPU $(GEM5_MEMORY) \
 		--take-checkpoints $(CHECKPOINT_GAP),$(CHECKPOINT_GAP) --max-checkpoints $(MAX_CHECKPOINT) \
+		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
+	touch $@
+
+# run random selection of regular intervals
+reg_results/%/generated: regular/%/generated
+	mkdir -p $(@D)
+	cd bin/$* && $(TIME) -o $(R)/$(@D)/random_overall.time $(R)/randomSample.py \
+		--checkpoint-dir $(R)/regular/$* --outdir $(R)/$(@D) --warmup $(WARMUP) \
+		-- $(GEM5) $(GEM5_CONFIG_FILE) \
+			-c ./$(BINARY.$*) --options='$(FLAGS.$*)' \
+			--cpu-type=ArmO3CPU $(GEM5_MEMORY) \
 		2> $(R)/$(@D)/err.log > $(R)/$(@D)/log.log
 	touch $@
