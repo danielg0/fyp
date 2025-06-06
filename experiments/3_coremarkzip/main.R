@@ -14,7 +14,7 @@ variance <- (data %>% group_by(benchmark, interval, cluster) %>% summarise(cpi_v
 mean_variance <- (variance %>% group_by(interval) %>% summarise(cpi_mean = mean(cpi_var, na.rm = TRUE), ipc_mean = mean(ipc_var, na.rm = TRUE)))
 
 # be AWARE of the filter occurring here
-variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_var, colour=benchmark)) +
+variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_var)) +
 
 #	geom_violin(scale = "width") +
 #	geom_hline(aes(yintercept = ipc_mean), mean_variance, colour = "red") +
@@ -72,6 +72,6 @@ ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark, linet
 	geom_point() + geom_line() +
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
 	scale_x_continuous(labels = scales::label_comma()) +
-	labs(x = "Interval Width (instructions)", y = "IPC Error", colour = "Benchmark") +
+	labs(x = "Interval Width (instructions)", y = "IPC Error", colour = "Benchmark", linetype="Method") +
 	theme_few(base_family="Latin Modern Roman") + scale_colour_few()
 ggsave("plots/ipc_error_by_interval.svg", width=10, height=5)

@@ -72,19 +72,24 @@ Modern computer architecture research often simulates how new designs would perf
 
 This has resulted in the development of SimPoint [@simpoint1], a tool for identifying the phases of execution present in a program using clustering algorithms and extracting samples representative of those phases, allowing for accurate estimation of metrics whilst executing a fraction of a full benchmark. The number of instructions that need simulating and error of a given set of SimPoints is influenced by several variables, including the size of those generated samples [@tracedoctor].
 
-In this document, we explore multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times.
+This thesis explores multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times.
 
 [^bbvs]: Basic Block Vectors, for more see {@sec:simpoint}
 
-\todo{random search/bay opt}
-
 By combining the SimPoint approach with Bayesian optimisation, we will demonstrate a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations with confidence levels derived from our clustering probability model. By feeding this back into the Bayesian optimisation process, we can quickly assess the performance across the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
 
-We then demonstrate our implementation of this approach on a subset of SPEC CPU 2017 [@speccpu2017], showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
+We then demonstrate our implementation of this approach on a subset of SPEC CPU 2017 [@speccpu2017] and CoreMark-PRO [@coremarkpro], showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
 
 ## Contributions
 
-## Technique Overview
+This thesis:
+
+- Introduces a method for super-sampling profiling information by combining basic block vectors that neighbour each other in the execution stream. This enables the generation of the basic block vector arrays required to perform SimPoint analysis on a range of interval widths, with no need for additional profiling of the original binary nor any loss in accuracy.
+- Shows how approximating basic block vectors by dividing them equally into some number of smaller vectors results in the same intervals being selected as SimPoints. We use this to develop a technique for producing a smaller set of SimPoints than an input set by truncating the execution of its checkpoints. Subsequently, we experimentally demonstrate how these truncated checkpoints achieve similar error rates to repeated application of the standard SimPoint approach.
+- Presents a method for using a set of SimPoints of different interval lengths with an existing Bayesian Optimiser in order to find performant configurations in a design space exploration experiment using less simulation time than existing SimPoint techniques.
+- Evaluates our new design space exploration method on a selection of SPEC [@speccpu2017] and CoreMark-PRO benchmarks, concluding with a discussion on how future research could make use of the work we have done to make effective use of limited computation budgets.
+
+\todo{Technique Overview \& Applications}
 
 # Background
 
@@ -446,13 +451,17 @@ x86 binaries are build with GCC 15.1.1 (installed through `dnf` package manager)
 ```
 ### Checkpoint Collection
 
+Figure \hyperlink{methodology-diagram}{4.1}
+
+
 ```{=latex}
 \columnbreak
 ```
 
 <!-- manually label and increment figure counter as image too big for it to appear normally? -->
 ![](./diagrams/Methodology.drawio.svg)
-Figure 4.1: A diagram giving an overview of our collection methodology. 
+\hypertarget{methodology-diagram}{Figure 4.1: A diagram giving an overview of our checkpoint collection methodology.}
+
 ```{=latex}
 \addtocounter{figure}{1}
 \end{multicols}
@@ -460,7 +469,11 @@ Figure 4.1: A diagram giving an overview of our collection methodology.
 
 ## Results
 
-![The relationship between interval size and the variance in CPI of a generated SimPoint cluster](./experiments/1_Variance/plots/variance_by_interval.svg)
+![A plot showing how variance of a set of SimPoint clusters varies with the interval size of the generated cluster. (todo: long explanation)](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
+
+![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are truncated.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
+
+\todo{plot collected timing data}
 
 # Future Work
 
