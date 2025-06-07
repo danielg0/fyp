@@ -535,6 +535,16 @@ We acknowledge the use of popular search engines, Google ([https://www.google.co
 
 ## Ethical Considerations {.unnumbered}
 
+We believe there are no significant ethical considerations to be made regarding this thesis that are not discussed in other sections.
+
 ## Sustainability {.unnumbered}
 
 ## Availability of Data and Materials {.unnumbered}
+
+\todo{how much of this could move to methodology?}
+
+Makefiles and scripts used to generate our results are available publicly on GitHub ([https://github.com/danielg0/fyp](https://github.com/danielg0/fyp)), where you can also find the R code used to produce the plots we have presented and the Pandoc-flavoured Markdown used to write this report.
+
+Results in this thesis are collected using [Gem5 stable v24.1.0.3](https://github.com/gem5/gem5/releases/tag/v24.1.0.3), with a change to fix a bug where resuming from a SimPoint checkpoint in a folder containing more than one hundred checkpoints picks incorrectly. We have shared our patch on GitHub ([https://github.com/danielg0/gem5](https://github.com/danielg0/gem5)).
+
+We have tested our system on benchmarks from the CoreMark-PRO and SPEC CPU 2017 suites. CoreMark-PRO benchmarks are available publicly on GitHub ([https://github.com/eembc/coremark-pro](https://github.com/eembc/coremark-pro)) and we tested using commit `4832cc6`. We used SPEC CPU 2017 version 1.1.9 to collect results for the SPEC CPU benchmarks we tested.
