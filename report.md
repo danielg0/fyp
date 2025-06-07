@@ -526,3 +526,15 @@ No other ethical issues exist.
 
 ::: {#refs}
 :::
+
+# Declarations {.unnumbered}
+
+## Use of Generative AI {.unnumbered}
+
+We acknowledge the use of popular search engines, Google ([https://www.google.com](https://www.google.com)) and DuckDuckGo ([https://duckduckgo.com](https://duckduckgo.com)), in order to find resources and debug implementation issues. Both these search engines provide generative AI-powered summaries of the top results. We confirm that no AI generated content has been presented in this thesis as our own work.
+
+## Ethical Considerations {.unnumbered}
+
+## Sustainability {.unnumbered}
+
+## Availability of Data and Materials {.unnumbered}
