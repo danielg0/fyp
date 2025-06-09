@@ -4,16 +4,14 @@
 
 	"design_of_experiment": {
 		"doe_type": "k latin hypercube",
-		"number_of_samples": 20
+		"number_of_samples": 14
 	},
-	"optimization_iterations": 10,
-	"evaluations_per_optimization_iteration": 5,
+	"optimization_iterations": 3,
+	"evaluations_per_optimization_iteration": 7,
 
 	"models": {
 		"model": "gaussian_process"
 	},
-
-	"print_parameter_importance": true,
 
 	"input_parameters": {
 		"rob_size": {
@@ -29,6 +27,11 @@
 		"p_width": {
 			"parameter_type": "integer",
 			"values": [4, 12]
+		},
+
+		"interval": {
+			"parameter_type": "ordinal",
+			"values": [125000]
 		}
 	}
 }
