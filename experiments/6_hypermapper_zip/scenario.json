@@ -1,0 +1,34 @@
+{
+	"application_name": "simpoint",
+	"optimization_objectives": ["performance", "energy"],
+
+	"design_of_experiment": {
+		"doe_type": "k latin hypercube",
+		"number_of_samples": 20
+	},
+	"optimization_iterations": 10,
+	"evaluations_per_optimization_iteration": 5,
+
+	"models": {
+		"model": "gaussian_process"
+	},
+
+	"print_parameter_importance": true,
+
+	"input_parameters": {
+		"rob_size": {
+			"parameter_type": "ordinal",
+			"values": [16, 32, 64, 128, 256, 512]
+		},
+
+		"lsq_size": {
+			"parameter_type": "integer",
+			"values": [4, 256]
+		},
+
+		"p_width": {
+			"parameter_type": "integer",
+			"values": [4, 12]
+		}
+	}
+}
