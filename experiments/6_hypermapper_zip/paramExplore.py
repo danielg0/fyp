@@ -165,7 +165,7 @@ def run_gem5_mcpat(params):
 		# hypermapper experiment variables
 		gem5_command.extend([
 			"-P", prefix + "numROBEntries=" + str(params["rob_size"]),
-			"-P", prefix + "LQEntries=" + str(params["ls_size"]),
+			"-P", prefix + "LQEntries=" + str(params["lq_size"]),
 			"-P", prefix + "SQEntries=" + str(params["sq_size"]),
 		])
 		pipeline_stages = ["fetch", "decode", "rename", "dispatch", "issue", "wb", "squash", "commit"]
