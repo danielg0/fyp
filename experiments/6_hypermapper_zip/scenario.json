@@ -16,7 +16,7 @@
 	"input_parameters": {
 		"rob_size": {
 			"parameter_type": "ordinal",
-			"values": [8, 16, 32, 64, 128, 256, 512]
+			"values": [16, 32, 64, 128, 256, 512]
 		},
 
 		"lq_size": {
