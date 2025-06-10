@@ -124,6 +124,11 @@ def run_checkpoint(config):
             "--checkpoint-dir", str(args.checkpointdir),
         ])
 
+    # timing
+    command.insert(0, "/usr/bin/time")
+    command.insert(1, "--output")
+    command.insert(2, str(resultdir / "simulation.time"))
+
     with open(resultdir / "log.log", "w") as log:
         with open(resultdir / "err.log", "w") as err:
             print(command)
