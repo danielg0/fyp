@@ -191,6 +191,8 @@ def run_gem5_mcpat(params):
 				status = process.wait()
 
 				if status != 0:
+					args.log.write(f"Error during gem5 in {tmpdirname}: {status}\n")
+					args.log.flush()
 					return None
 
 		# convert gem5 config/stats to mcpat input
@@ -207,6 +209,8 @@ def run_gem5_mcpat(params):
 				status = process.wait()
 
 				if status != 0:
+					args.log.write(f"Error during conversion in {tmpdirname}: {status}\n")
+					args.log.flush()
 					return None
 
 		# run mcpat on converted input
@@ -225,6 +229,8 @@ def run_gem5_mcpat(params):
 				status = process.wait()
 
 				if status != 0:
+					args.log.write(f"Error during mcpat in {tmpdirname}: {status}\n")
+					args.log.flush()
 					return None
 
 		# pull out performance and instruction/cycle count from stats.txt
