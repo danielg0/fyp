@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-# picked as its 60GB/8GB
-THREADS=7
+THREADS=10
 
 import argparse
 import hypermapper
@@ -128,7 +127,8 @@ baseline = max(weights.keys())
 #   "cpt_dir": checkpoint directory to run
 #
 #   "rob_size": size of reorder buffer
-#   "lsq_size": size of load/store queues
+#   "lq_size": size of load queue
+#   "sq_size": size of store queue
 #   "p_width": pipeline width
 # returned is None or a dict with the fields:
 #   "energy": energy used in nanojoules/instruction
@@ -165,8 +165,8 @@ def run_gem5_mcpat(params):
 		# hypermapper experiment variables
 		gem5_command.extend([
 			"-P", prefix + "numROBEntries=" + str(params["rob_size"]),
-			"-P", prefix + "LQEntries=" + str(params["lsq_size"]),
-			"-P", prefix + "SQEntries=" + str(params["lsq_size"]),
+			"-P", prefix + "LQEntries=" + str(params["ls_size"]),
+			"-P", prefix + "SQEntries=" + str(params["sq_size"]),
 		])
 		pipeline_stages = ["fetch", "decode", "rename", "dispatch", "issue", "wb", "squash", "commit"]
 		for stage in pipeline_stages:
@@ -277,7 +277,8 @@ def run_gem5_mcpat(params):
 # also calculates the baseline for this configuration too
 # takes a dict with these fields
 #   "rob_size": size of reorder buffer
-#   "lsq_size": size of load/store queues
+#   "lq_size": size of load queue
+#   "sq_size": size of store queue
 #   "p_width": pipeline width
 #   "interval": interval width to target
 # returned is None or a dict with the fields:
@@ -300,7 +301,8 @@ def run_simpoint_set(params):
 			"cpt_id": cpt_id,
 			"cpt_dir": checkpoint_dir,
 			"rob_size": params["rob_size"],
-			"lsq_size": params["lsq_size"],
+			"lq_size": params["lq_size"],
+			"sq_size": params["sq_size"],
 			"p_width": params["p_width"],
 		}
 
@@ -314,8 +316,8 @@ def run_simpoint_set(params):
 
 	# do we need to run the baseline too?
 	if params["interval"] == baseline:
-		result["performance_baseline"] = performance
-		result["energy_baseline"] = energy
+		result["performance_baseline"] = result["performance"]
+		result["energy_baseline"] = result["energy"]
 	else:
 		baseline_params = dict(params)
 		baseline_params["interval"] = baseline
@@ -328,19 +330,21 @@ def run_simpoint_set(params):
 # compute multiple simpoint metrics in parallel with passed in parameters, whilst logging process to a .csv
 # takes a dictionary:
 #   "rob_size": (array) size of reorder buffer
-#   "lsq_size": (array) size of load/store queues
+#   "lq_size": (array) size of load queue
+#   "sq_size": (array) size of store queue
 #   "p_width": (array) pipeline width
 #   "interval": (array) interval width to use (this will always only be one value)
 def run_parallel_gem5(base_params):
 	args.log.write(str(base_params) + "\n")
 	args.log.flush()
 
-	exp_count = len(base_params)
+	exp_count = len(base_params["rob_size"])
 
 	# unfold map of arrays into array of maps
 	experiments = [{
 		"rob_size": base_params["rob_size"][i],
-		"lsq_size": base_params["lsq_size"][i],
+		"lq_size": base_params["lq_size"][i],
+		"sq_size": base_params["sq_size"][i],
 		"p_width": base_params["p_width"][i],
 		"interval": base_params["interval"][i],
 	} for i in range(exp_count)]
@@ -358,14 +362,14 @@ def run_parallel_gem5(base_params):
 		"energy": [],
 		"performance": [],
 	}
-	for r in result:
-		args.data_out.write(f'{order},{r["rob_size"]},{r["lsq_size"]},{r["p_width"]},{r["energy"]},{r["performance"]},{r["time"]},{r["energy_baseline"]},{r["performance_baseline"]}\n')
-		hypermapper_result["energy"].append(r["energy"])
-		hypermapper_result["performance"].append(r["performance"])
+	for i in range(len(result)):
+		args.data_out.write(f'{order},{experiments[i]["rob_size"]},{experiments[i]["lq_size"]},{experiments[i]["sq_size"]},{experiments[i]["p_width"]},{result[i]["energy"]},{result[i]["performance"]},{result[i]["time"]},{result[i]["energy_baseline"]},{result[i]["performance_baseline"]}\n')
+		hypermapper_result["energy"].append(result[i]["energy"])
+		hypermapper_result["performance"].append(result[i]["performance"])
 	args.data_out.flush()
 
 	return hypermapper_result
 
-args.data_out.write("order,rob_size,lsq_size,p_width,energy,performance,time,energy_baseline,performance_baseline\n")
+args.data_out.write("order,rob_size,lq_size,sq_size,p_width,energy,performance,time,energy_baseline,performance_baseline\n")
 args.data_out.flush()
 hypermapper.optimizer.optimize("scenario.json", run_parallel_gem5)

@@ -3,25 +3,30 @@
 	"optimization_objectives": ["performance", "energy"],
 
 	"design_of_experiment": {
-		"doe_type": "k latin hypercube",
-		"number_of_samples": 14
+		"doe_type": "random sampling",
+		"number_of_samples": 10
 	},
-	"optimization_iterations": 3,
-	"evaluations_per_optimization_iteration": 7,
+	"optimization_iterations": 49,
+	"evaluations_per_optimization_iteration": 10,
 
 	"models": {
-		"model": "gaussian_process"
+		"model": "random_forest"
 	},
 
 	"input_parameters": {
 		"rob_size": {
 			"parameter_type": "ordinal",
-			"values": [16, 32, 64, 128, 256, 512]
+			"values": [8, 16, 32, 64, 128, 256, 512]
 		},
 
-		"lsq_size": {
-			"parameter_type": "integer",
-			"values": [4, 256]
+		"lq_size": {
+			"parameter_type": "ordinal",
+			"values": [4, 16, 64, 128, 256]
+		},
+
+		"sq_size": {
+			"parameter_type": "ordinal",
+			"values": [4, 16, 64, 128, 256]
 		},
 
 		"p_width": {
