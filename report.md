@@ -34,6 +34,9 @@ header-includes:
     %% Included to make secnos work
     \usepackage{hyperref}
     \usepackage{cleveref}
+
+    %%lmao
+    \usepackage{xcolor}
     ```
 link-citations: true
 secnos-cleveref: true
@@ -43,53 +46,97 @@ fignos-cleveref: true
 <!-- manually encode abstract & toc to get order right -->
 
 ```{=latex}
+\pagecolor{white}
 \begin{abstract}
 ```
 
-Fast evaluation of new hardware ideas is important for effective research in processor microarchitecture. Simulations of benchmark programs are an important tool to achieve this and representative sampling techniques, such as SimPoint, accelerate this process by identifying subsets of the program that are representative of the whole execution. Previous work has shown that estimates of performance metrics gathered by simulating just those selected intervals can be very accurate if they are sufficiently long.
+Fast evaluation of new hardware ideas is crucial for effective research in processor microarchitecture. Simulations of benchmark programs are an important tool to achieve this and representative sampling techniques, such as SimPoint, accelerate this process by profiling a program to identify subsets of it that are representative of the whole execution. Previous work has shown that estimates of performance metrics gathered by simulating just those selected intervals can be very accurate if they are sufficiently long.
 
 This thesis introduces a technique for combining short and long simulation intervals with parameter optimisation methods from the ML domain to efficiently measure the effect of hardware changes. Our main contributions include:
 
 - Investigating the trade-off between error and simulation time present when choosing a simulation interval's size.
-- Discussing interval sub-sampling and super-sampling techniques to efficiently generate simulation intervals from individual profiling runs. We give results showing a Y% decrease in CPU time required to pick simulation points.
-- Demonstrating the viability of combining multiple simulation interval sets of different sizes with modern ML techniques for parameter optimisation to efficiently find performant configurations.
-- Presenting an implementation that can find the Pareto front of a design-space exploration experiment on a given SPEC benchmark with X% less simulation time than traditional techniques.
 
-The tools this thesis introduces will contribute to more efficient use of simulation time in microarchitecture research. It also empowers researchers to explore more avenues for performance gain by giving them tools to quickly evaluate a suite of ideas before delving further into those that show promise. Our discussions lay the path for future exploration into the variance of SimPoint sets, leading to more statistically rigorous architectural research\todo{this claim is possibly a bit of a stretch?}.
+- Discussing interval sub-sampling and super-sampling techniques to efficiently generate new simulation intervals from existing profiling runs. These techniques result in a Y% decrease in CPU time required to pick simulation points.
+
+- Demonstrating the viability of combining multiple simulation interval sets of different sizes with modern ML techniques for parameter optimisation to efficiently find performant configurations.
+
+- Presenting an implementation that can find the Pareto front of a design-space exploration experiment on a benchmark program with X% less simulation time than traditional techniques.
+
+The techniques this thesis introduces will contribute to more efficient use of simulation time in microarchitecture research with minimal opportunity cost by reusing expensive profiling and checkpointing data already collected. It empowers researchers to explore more avenues for performance gain by giving them the tools to quickly evaluate a suite of ideas before delving further into those that show promise.
+
+Our discussions lay the path for future exploration into the variance of SimPoint sets, the computation of error bars on performance metric estimates made using SimPoints and how we can use them for prior injection into the optimisation process.
 
 ```{=latex}
 \end{abstract}
+```
 
+<!--
+```{=latex}
+\renewcommand{\abstractname}{Acknowledgements}
+\begin{abstract}
+```
+```{=latex}
+\end{abstract}
+```
+-->
+
+```{=latex}
 \tableofcontents
 % \listoffigures
 ```
 
 # Introduction
 
-Modern computer architecture research often simulates how new designs would perform on existing benchmark suites like SPEC CPU 2017 [@speccpu2017]. This is a lengthy process, with single runs taking weeks or months, a cost at odds with the desire to test many different configurations of hardware parameters (cache sizes and associativities, register counts, store queue lengths, etc.) to accurately identify globally minimally configurations and build a Pareto front[^pareto]. As a result, much research has been done both on speeding up simulators and reducing the amount of instructions that must be simulated to get an accurate benchmark result.
+Modern computer architecture research often simulates how new designs would perform on existing benchmark suites like SPEC CPU 2017 [@speccpu2017] as chip fabrication is expensive. Simulation is still a lengthy process, with single runs taking weeks or months, a cost at odds with the desire to test many different configurations of hardware parameters (cache sizes and associativities, register counts, store queue lengths, etc.) to accurately identify configurations that minimise energy and maximise performance to build a Pareto front[^pareto]. As a result, much research has been done both on speeding up simulators and estimating a benchmark result from samples of a program's execution to reduce the amount of instructions that must be simulated.
 
 [^pareto]: The Pareto front is the set of "efficient" configurations which cannot be changed to improve on one metric (power usage, instructions per cycle, etc.) without another metric worsening.
 
-This has resulted in the development of SimPoint [@simpoint1], a tool for identifying the phases of execution present in a program using clustering algorithms and extracting samples representative of those phases, allowing for accurate estimation of metrics whilst executing a fraction of a full benchmark. The number of instructions that need simulating and error of a given set of SimPoints is influenced by several variables, including the size of those generated samples [@tracedoctor].
+This has resulted in the development of SimPoint [@simpoint1], a tool for profiling a program and identifying the phases present in it using clustering algorithms. By extracting "SimPoints", samples representative of those phases, we can accurately estimate performance metrics whilst executing a fraction of a full benchmark. The number of instructions that need simulating and error of a given set of SimPoints is influenced by several variables, including the width of those generated samples [@tracedoctor], measured as the number of instructions executed per sample.
 
-This thesis explores multiple techniques for splitting and combining collected SimPoint samples, and measure the effect these techniques have on the error rate of the resultant samples. Using this, we show that from a single set of collected BBVs[^bbvs], we can construct several sets of SimPoint samples with a range of error rates and simulation times.
+This thesis explores techniques for splitting and combining collected profiling data to create SimPoints of different widths and then demonstrates the tradeoff between error rate and simulation time of those resultant SimPoints. Using these techniques, we show that given a single set of profiling data or simulator checkpoints, we can construct several SimPoint sets of varying widths faster than the traditional SimPoint technique, and that they estimate performance metrics with a similar range of error rates.
 
-[^bbvs]: Basic Block Vectors, for more see {@sec:simpoint}
+Bayesian optimisation is an approach to determine the minimal value of a black-box function with few evaluations. Modern Bayesian optimisers [@hypermapper2] can work with multiple discrete or continuous parameters with constraints on their values. This makes them ideal for working with hardware parameters, where we want to limit exploration to designs that are feasible. Previous work has applied this technique to problems in the computer architecture space, such as calibrating simulator parameters to minimise error relative to a target machine [@gem5tune].
 
-By combining the SimPoint approach with Bayesian optimisation, we will demonstrate a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations with confidence levels derived from our clustering probability model. By feeding this back into the Bayesian optimisation process, we can quickly assess the performance across the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
+By combining our SimPoint scaling approach with Bayesian optimisation, we will demonstrate a novel approach for design space exploration that uses multiple sets of differently-sized samples to estimate performance metrics for potential hardware configurations faster than traditional random sampling. With this, we can quickly assess a wider range of the hardware configuration space whilst retaining a high level of confidence in the optimality of the final Pareto front.
 
-We then demonstrate our implementation of this approach on a subset of SPEC CPU 2017 [@speccpu2017] and CoreMark-PRO [@coremarkpro], showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a useful tool for future computer architecture investigations.
+We then demonstrate our implementation of this approach on a subset of the CoreMark-PRO [@coremarkpro] benchmark suite, showing that it identifies optimal hardware configurations faster than traditional techniques and is therefore a viable tool for future computer architecture investigations.
+
+\newpage
 
 ## Contributions
 
 This thesis:
 
-- Introduces a method for super-sampling profiling information by combining basic block vectors that neighbour each other in the execution stream. This enables the generation of the basic block vector arrays required to perform SimPoint analysis on a range of interval widths, with no need for additional profiling of the original binary nor any loss in accuracy.
-- Shows how approximating basic block vectors by dividing them equally into some number of smaller vectors results in the same intervals being selected as SimPoints. We use this to develop a technique for producing a smaller set of SimPoints than an input set by truncating the execution of its checkpoints. Subsequently, we experimentally demonstrate how these truncated checkpoints achieve similar error rates to repeated application of the standard SimPoint approach.
-- Presents a method for using a set of SimPoints of different interval lengths with an existing Bayesian Optimiser in order to find performant configurations in a design space exploration experiment using less simulation time than existing SimPoint techniques.
-- Evaluates our new design space exploration method on a selection of SPEC [@speccpu2017] and CoreMark-PRO benchmarks, concluding with a discussion on how future research could make use of the work we have done to make effective use of limited computation budgets.
+- Introduces a method for scaling up profiling information used to generate SimPoints in order to reduce simulation time spent reprofiling programs with no loss in accuracy ({@sec:super-sampling}). In an experiment where SimPoints are generated for eight different simulation interval widths, this reduces overall execution time by X% ({@sec:results}).
+
+- Gives mathematical reasoning that truncating the simulation of selected SimPoints after $T$ instructions is equivalent to rerunning the SimPoint process on profiling data equally split into intervals $T$ instructions wide ({@sec:sub-sampling-using-checkpoint-truncation}). Subsequently, we experimentally demonstrate that these truncated checkpoints achieve similar error rates to repeated application of the standard SimPoint approach ({@sec:results}).
+
+- Presents a method for using a set of SimPoints of different interval lengths with an existing Bayesian Optimiser in order to find performant configurations in a design space exploration experiment using less simulation time than existing SimPoint techniques ({@sec:todo}).
+
+- Evaluates our new design space exploration method on a CoreMark-PRO [@coremarkpro] benchmark ({@sec:todo}) demonstrating we find Pareto fronts X% faster than with a random search, concluding with a discussion on how future research could make use of the work we have done to make effective use of limited computation budgets ({@sec:todo}).
 
 \todo{Technique Overview \& Applications}
+
+```{=latex}
+\begin{multicols}{2}
+```
+
+![](experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
+\addtocounter{figure}{1}
+\hypertarget{plot-a}{Figure \thefigure: A diagram giving an overview of our checkpoint collection methodology.}
+
+
+```{=latex}
+\columnbreak
+```
+
+![](experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
+\addtocounter{figure}{1}
+\hypertarget{plot-b}{Figure \thefigure: A diagram giving an overview of our checkpoint collection methodology.}
+
+```{=latex}
+\end{multicols}
+```
 
 # Background
 
@@ -97,25 +144,34 @@ This chapter provides an overview of the prerequisite knowledge required for thi
 
 ## Simulators
 
-Fabricating new hardware is a long and expensive process, so simulators like gem5 [@gem5] and SimpleScalar [@simplescalar] are used to evaluate new microarchitecture designs before they become silicon. By running benchmark suites, collections of programs that are representative of common computing workloads, performance comparisons can be made with existing designs.
+Fabricating new hardware is a long and expensive process, so simulators like gem5 [@gem5], zsim [@zsim] and SimpleScalar [@simplescalar] are used to evaluate new microarchitecture designs before they become silicon. By running benchmark suites, collections of programs that are representative of common computing workloads, performance comparisons can be made with existing designs.
 
-These simulators are both open-source, with their code and documentation available freely online. This makes it possible for researchers to extend them with novel hardware structures and examine the effects of these extensions on overall system performance.
+These simulators are all open-source, with their code and documentation available freely online. This makes it possible for researchers to extend them with novel hardware structures and examine the effects of these extensions on overall system performance.
 
 Both SimpleScalar and gem5 provide different CPU models that span a spectrum between:
 
-\todo{discuss more sims, simgen, spider}
-
-\todo{look at ml micro-archit ecture sims (tao)}
+\todo{trace simulation?}
 
 - Fast functional simulators that emulate just the instruction set of a machine such as gem5's `AtomicCPU` and SimpleScalar's `sim-fast`, which can achieve simulation speeds of 6 MIPS[^mips] [@simplescalar, Table 1], whilst collecting information on the flow of execution.
+
 - Slower microarchitecture simulators that can track out-of-order scheduling, data hazards, functional units, cache hierarchies, etc. to produce accurate values for IPC[^ipc] when executing a given program. These cycle-accurate models include gem5's O3 model and SimpleScalar's `sim-outorder` which simulates at speeds of 0.3 MIPS.
 
-[^mips]: MIPS: Millions of Instructions Per Second
-[^ipc]: IPC: Instructions Per Cycle
+[^mips]: MIPS: Millions of Instructions Per Second.
+[^ipc]: IPC: Instructions Per Cycle.
+
+Where gem5 differs from zsim is in the approach taken to executing instructions. gem5 emulates instructions, decoding each one and applying its effects to the simulator's state. In contrast, zsim uses binary instrumentation, where the program is modified to add in logging around basic blocks ({@sec:basic-blocks}), memory accesses, etc. that can be used to determine the simulation's timing. The modified binary is then run natively, relying on the host processor to maintain the functional state of the simulator. Instrumentation, due to running natively, is often faster than emulation, but relies on the simulated architecture matching the hosts - gem5 in comparison is more portable and can simulate novel architectures and architecture extensions[^magic-nops] if required.
+
+[^magic-nops]: That said, instrumenting simulators can simulate new instructions added to existing architectures using "magic NOPs", no-operation instructions of a specific form that can be detected by the simulator and won't appear in the binary otherwise [@zsim; @gems].
+
+### DL-based Simulators
+
+Recently, 
 
 ### Abbreviated Runs
 
-Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but simulating with a functional model will not produce as accurate performance metric values. To alleviate this, we can run our functional simulator for a few hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, [@smarts-paper] observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour [@abbrunsinaccurate].
+Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but simulating with a functional model will not produce as accurate performance metric values. To alleviate this, we could run our functional simulator for several hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, [@smarts-paper] observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour [@abbrunsinaccurate].
+
+Instead, modern research \todo{find examples of research} uses several different sampling methods that are based on statistical theory or on profiling the target program to learn about its behavior during execution.
 
 ## Sampled Simulation Techniques
 
@@ -124,7 +180,9 @@ Accurate simulations of entire benchmark suites can take days or weeks to comple
 Many simulators offer both accurate cycle-level models and fast functional models. In order to achieve a balance between the accuracy and speed of these two models, we can run a cycle-accurate simulator on a subset of a program's complete execution and use the functional model for the rest. There are three main approaches to sampling a program [@simpoint-textbook, Ch 6] that can produce results that are representative of a programs varying behaviour:
 
 - Random sampling, where we distribute the sets of instructions that we sample randomly throughout the entire execution
+
 - Periodic sampling techniques, such as SMARTS (see {@sec:smarts}), where those sets are distributed regularly throughout the execution - the distance from one set to the next is predetermined
+
 - Representative, or targeted, sampling techniques such as SimPoint (see {@sec:simpoint}), which start by analysing the program, then pick the sets of instructions to sample that collectively represent the full behaviour of the program
 
 {\*@fig:sampling-techniques} shows one set of samples that could be picked using these three methods for a given program. The random samples are distributed randomly throughout the program whereas the periodic occur at regular intervals. Targeted samples are taken for the three different phases in the program, which correspond to the three different IPC behaviours.
@@ -135,7 +193,7 @@ Many simulators offer both accurate cycle-level models and fast functional model
 
 Both random and periodic sampling are statistical sampling techniques that build upon existing mathematical theory, such as the central limit theorem, which is explained below.
 
-The central limit theorem states that if sufficient independent observations are taken of a population (ie. more than thirty) with a finite variance $\sigma^2$ and mean $\mu$, then the distribution of the sample mean $\bar{x}$ approximates a normal distribution with mean $\mu$ and variance $\sigma^2 \over n$, irrespective of how the population is distributed.
+The central limit theorem states that if sufficient independent observations are taken of a population (in practice, more than thirty) with a finite variance $\sigma^2$ and mean $\mu$, then the distribution of the sample mean $\bar{x}$ approximates a normal distribution with mean $\mu$ and variance $\sigma^2 \over n$, irrespective of how the population is distributed.
 
 Practically, if we use a statistical sampling method on a program and take $n$ samples of a performance metric, $[x_1, \ldots, x_n]$, we can calculate a sample mean $\bar{x}$ and sample variance $s^2$ as follows:
 
@@ -172,23 +230,29 @@ Before each sample of size $n$, SMARTS has a period of detailed simulation of si
 The resulting sampling looks as follows:
 
 1. $n(k - 1) - w$ instructions are executed through functional warming
+
 2. $w$ instructions are executed through detailed warming to prepare the architecture state not maintained through functional warming
+
 3. $n$ instructions are executed in detailed mode with the cycle-accurate simulator in order to collect the measured performance metric
 
 [^slowdown]: The paper implemented a functional warming model that could operate at 55% the speed of the existing function simulation model.
 
 ### SimPoint
 
-SimPoint is a targeted sampling technique that tracks the code executed by a program and uses that to decide where to sample in order to include all the behaviours it exhibits. This chapter will introduce the technique and discuss some further research to extend its functionality.
+SimPoint is a representative sampling technique that tracks the code executed by a program and uses that to decide where to sample in order to include all the behaviours it exhibits. This section will introduce the technique and discuss some further research to extend its functionality.
 
 ![A summary of the original SimPoint [@simpoint1] process](diagrams/simpoint-overview.drawio.svg){#fig:simpoint-summary}
 
 SimPoint is composed into three parts, collection of a program trace, use of that program trace to identify the different phases of behaviour in the program and selection of samples to simulation from each of those phases. The process of identifying phases is shown in {@fig:simpoint-summary} which is labelled as follows:
 
 1. Simulate the entire program on a simplified CPU, tracking the basic blocks ({@sec:basic-blocks}) being executed in order to build basic block vectors (BBVs)
+
 2. Represent those vectors as points in a basic block space
+
 3. Perform a random linear map on the set of BBVs to reduce the dimensionality of the data
+
 4. Group the BBVs using $k$-means clustering ({@sec:k-means-clustering}), which identifies the phases in the program
+
 5. Pick a BBV, and corresponding interval, closest to the centre of each cluster to represent it, recording the proportion of BBVs in that cluster
 
 To produce a final performance metric, we do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. We then weight the performance metrics of each phase by the proportion of BBVs in that phase's cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
@@ -267,11 +331,12 @@ To identify the phases of the program from the BBVs, we want to find groups of p
 $k$-Means clustering iteratively splits BBVs into $k$ sets, where $k$ is chosen before the process begins. First, a random linear map is performed on the BBV space to reduce the dimensions from the, potentially very high, number of basic blocks in the program, typically to fifteen - this avoids "the curse of dimensionality", where a high number of dimensions reduces the effectiveness of $k$-means clustering. Then, $k$ random points are picked to act as the initial centres of each set, and the following steps are followed:
 
 1. For each BBV, measure its Euclidean distance to each centre and assign it to the centre closest to it
+
 2. For each centre, calculate the mean average position of every BBV assigned to it and move that centre to there
 
 These two steps are repeated until which BBVs are assigned to which clusters stops changing. The BBV closest to each cluster’s centre is the one used to represent the whole cluster. In addition to recording that, the number of BBVs in each cluster is recorded. Estimating a performance metric then consists of fast-forwarding to the start of each clusters representative BBV using a functional simulator model[^warming], recording that metric during the sampled interval, and fast-forwarding to the next cluster. Once collected, the metrics for each cluster are combined into an average weighted by the number of BBVs in each cluster. For instance, given a clustering, $C$, and an array of collected metrics, $M$, we can calculate a final estimate for the metric, $E$, as follows:
 
-[^warming]: No consideration is needed for warming up architecture state as SimPoint has larger simulation intervals than SMART [@smarts-paper, Ch 5.3]
+[^warming]: No consideration is needed for warming up architecture state as SimPoint has larger simulation intervals than SMART [@smarts-paper, Ch 5.3].
 
 $$C = \left\{c_1: [BBV_1, BBV_5, \ldots], c_2: [BBV_2, BBV_4, \ldots], \ldots, c_k: [BBV_3, BBV_9, \ldots]\right\}$$
 
@@ -344,8 +409,11 @@ Take $a$ and $b$, two program intervals of length $N$; let the BBVs of these pro
 Our approach to generate a set of BBV arrays given a set of output intervals, $is$ is:
 
 1. Pick the smallest interval in $is$, $i_0$ as the *input interval size*
+
 2. Create an empty BBV array for each other interval in $is$
+
 3. Run a simulation of the program to generate an initial set of BBVs of interval size $i_0$
+
 4. Iterate over each BBV in the generated array, tracking for each interval in $is$ other than $i_0$ a mutable BBV and an instruction counter. For each BBV:
     a. Add this iteration's BBV to each mutable BBV and add $i_0$ to each instruction counter
     b. For each interval whose instruction counter equals its interval size, append its mutable BBV to its BBV array and reset that intervals counter and mutable BBV
@@ -431,7 +499,7 @@ In {@sec:generating-basic-block-vectors} we introduced two techniques for effici
 
 ## Methodology
 
-These results are collected on a ...\todo{machine name?} with the following specification:
+These results are collected on a MinisForum UM890 Pro with the following specification:
 
 |  |  |
 |--|--|
@@ -440,19 +508,45 @@ These results are collected on a ...\todo{machine name?} with the following spec
 | Storage: | 2 Terabyte Seagate FireCuda 520 NVMe SSD |
 | OS: | Fedora Version 42 |
 
-x86 binaries are build with GCC 15.1.1 (installed through `dnf` package manager), ARM binaries are built with GCC 15.1.0, cross-compiled using crosstool-NG v1.27.
+x86 benchmark binaries are built with GCC 15.1.1 (installed through `dnf` package manager), ARM benchmark binaries are built with GCC 15.1.0, cross-compiled using crosstool-NG v1.27.
+
+### Warm-up Periods
+
+Research (...) has been on various approaches to SimPoint warm-up, from ... to ... Evaluating which of these approaches is best is outside of the scope of this project, so in each of our experiments there is a single fixed warm-up value, and all checkpoints are taken with that amount of warm-up, except for those checkpoints taken from the beginning of a program where there is no preceding execution to use as warm-up. For those, we simulate the program from the beginning and set Gem5's `--maxinsts` argument to the intended interval width. Selecting a SimPoint at the beginning of a program occurs fairly commonly across our experiments, likely due to how initialisation exhibits different behaviours (system calls to open files, parsing command-line arguments, etc.) from the rest of a program's execution, though it is typically given a low weighting due to the small proportion of execution it characterises.
 
 ### Benchmark Selection
 
 \newpage
 
+### Checkpoint Collection
+
 ```{=latex}
 \begin{multicols}{2}
 ```
-### Checkpoint Collection
 
-Figure \hyperlink{methodology-diagram}{4.1}
+Figure \hyperlink{methodology-diagram}{4.1} illustrates the complete process we have carried out to gather SimPoints and evaluate our new scaling techniques. The stages of this process are labelled as follows:
 
+1. We take our benchmark binary and profile it using a functional model from Gem5 [@gem5], gathering an array of basic block vectors (@sec:basic-blocks) of length $N$, that record the number of instructions executed from each basic block in the program for each $N$-instruction long interval in the execution stream. $N$ is picked so that it is a factor of every interval we want to collect checkpoints for.
+
+<!-- 2. We have written a Python script that reads through the Gem5 output, parsing each BBV and adding it to a set of vector accumulators (one for each target interval size we want to make BBVs for). When an vector accumulators size reaches its target, its written to an output file for that interval size, and the accumulator is reset. -->
+
+2. We have written a Python script that performs a single pass through Gem5's output, parsing each BBV and summing adjacent BBVs to form BBVs arrays for each other interval size we're interested in.
+
+3. Having generated BBVs for each interval size of interest, we perform standard SimPoint analysis on them to generate a set of clusters, their weightings and which interval we have picked as the SimPoint for each cluster.
+
+4. With the SimPoints selected, we rerun the functional Gem5 simulator. It pauses before each SimPoint[^warmup] and takes checkpoints, snapshots of the memory and system registers we can use to resume from the same point later.
+
+[^warmup]: Technically speaking, for a SimPoint that starts at instruction $I$, we take a checkpoint at instruction $I - W$, where $W$ is the length of our warmup period.
+
+5. Executing collected checkpoints is done one of two ways depending on whether we're testing standard SimPoints or sub-sampled (or truncated) SimPoints:
+
+   a. For standard SimPoints, we parse the output of the SimPoint analysis to determine which checkpoints we need to run and how to weight them in order to produce a metric estimate for each interval size.
+
+   b. When sub-sampling, we isolate the checkpoints for a single interval, then copy and reconfigure[^truncation] them to run for each other target interval length.
+
+[^truncation]: Gem5 encodes checkpoint parameters in the name of the folder holding the memory dump and system register state file. By creating a symbolic link to the checkpoint folder named differently, we can trivially run it for any configuration in parallel.
+
+6. In addition to executing the checkpoints, we also run the entire benchmark program using Gem5's more accurate `O3CPU` model to produce a baseline we can calculate error values against.
 
 ```{=latex}
 \columnbreak
@@ -460,10 +554,10 @@ Figure \hyperlink{methodology-diagram}{4.1}
 
 <!-- manually label and increment figure counter as image too big for it to appear normally? -->
 ![](./diagrams/Methodology.drawio.svg)
-\hypertarget{methodology-diagram}{Figure 4.1: A diagram giving an overview of our checkpoint collection methodology.}
+\addtocounter{figure}{1}
+\hypertarget{methodology-diagram}{Figure \thefigure: A diagram giving an overview of our checkpoint collection methodology.}
 
 ```{=latex}
-\addtocounter{figure}{1}
 \end{multicols}
 ```
 
@@ -478,6 +572,7 @@ Figure \hyperlink{methodology-diagram}{4.1}
 # Future Work
 
 - Incorporating BBV generation into Gem5
+
 - Could Gem5 output stats periodically rather than just at the end (combine collecting IPC, etc. for the same checkpoint at different intervals).
 
 <!--
