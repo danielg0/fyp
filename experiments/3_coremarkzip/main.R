@@ -56,6 +56,16 @@ estimates <- selected %>% select(benchmark, interval, source, width, cluster, cp
 	full_join(weights) %>% group_by(benchmark, interval, source) %>%
 	summarise(weighted_cpi = sum(cpi * weight), weighted_ipc = sum(ipc * weight))
 
+# get regular samples to compare to
+regular <- (bind_rows(read_csv("./regular.csv"), read_csv("../2.1_test/regular.csv")) %>%
+	    group_by(benchmark, interval) %>%
+	    summarise(weighted_cpi = mean(cpi, na.rm=TRUE), weighted_ipc = mean(ipc, na.rm=TRUE), ipc_var = var(ipc, na.rm=TRUE)) %>%
+	    mutate(source = "Random"))
+
+reg_var <- ggplot(regular, aes(x = interval, y = ipc_var, colour=benchmark)) + geom_point()
+
+estimates <- bind_rows(estimates, regular)
+
 # get baseline to compare to
 baseline <- read_csv("baseline/baseline.csv")
 spec_baseline <- read_csv("../2.1_test/baseline/baseline.csv")
@@ -67,7 +77,7 @@ error <- baseline %>% full_join(estimates, by = join_by(benchmark)) %>%
 	       cpi_percent_error = cpi_error / real_cpi,
 	       ipc_percent_error = ipc_error / real_ipc)
 
-ggplot(error, aes(x = interval, y = ipc_percent_error, colour = benchmark, linetype = source)) +
+ggplot(filter(error, source != "Random"), aes(x = interval, y = ipc_percent_error, colour = benchmark, linetype = source)) +
 	geom_vline(xintercept=4000000, linetype="dotted") +
 	geom_point() + geom_line() +
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
