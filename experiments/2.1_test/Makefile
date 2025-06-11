@@ -142,6 +142,7 @@ regular/%/generated: bin/%
 	touch $@
 
 # run random selection of regular intervals
+.PRECIOUS: reg_results/%/generated
 reg_results/%/generated: regular/%/generated
 	mkdir -p $(@D)
 	cd bin/$* && $(TIME) -o $(R)/$(@D)/random_overall.time $(R)/randomSample.py \
