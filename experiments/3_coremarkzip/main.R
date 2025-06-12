@@ -111,3 +111,21 @@ ggplot(error, aes(x = cputime, y = ipc_percent_error, colour = source)) +
 	theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom") + scale_colour_few()
 ggsave("plots/error_pareto.svg", width=15, height=15, unit="cm")
 
+
+# variance summarised plot with random samples too
+variance_summary = bind_rows(
+	filter(variance, len == 10) %>% group_by(benchmark, interval) %>%
+		summarise(ipc_var = median(ipc_var, na.rm=TRUE)) %>%
+		mutate(source = "Super-sample"),
+	regular %>% select(benchmark, interval, ipc_var, source)
+)
+
+variance_clear <- ggplot(variance_summary, aes(x = interval, y = ipc_var, colour = source)) +
+	geom_point() +
+	geom_line() +
+	facet_grid(rows = vars(benchmark), scales = "free") +
+	scale_x_continuous(labels = scales::label_comma()) +
+	theme_few(base_family="Latin Modern Roman", base_size=10) + scale_colour_few() +
+	labs(x = "IPC Variance", y = "Interval Width (instructions)", colour = "Method")
+ggsave("plots/variance_clearer.svg", width=15, height=8, unit="cm")
+

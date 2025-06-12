@@ -117,6 +117,8 @@ This thesis:
 
 \todo{Technique Overview \& Applications}
 
+<!--
+
 ```{=latex}
 \begin{multicols}{2}
 ```
@@ -137,6 +139,7 @@ This thesis:
 ```{=latex}
 \end{multicols}
 ```
+-->
 
 # Background
 
@@ -521,6 +524,10 @@ There are several views in the literature on the need for warmup when using SimP
 
 ### Benchmark Selection
 
+In order to calculate the error of the IPC estimates our techniques produce, we will need to perform a full cycle-accurate simulation of the benchmark programs we test. Given the limited time available to complete this project, we have therefore chosen to evaluate our approach using one of the shorter benchmarks from the SPEC CPU 2017 benchmark suite [@speccpu2017], `x264`. We are executing `x264` on its test workload to further reduce execution time - this means we cannot compare our metrics to previous reseach, but does not affect the validity of our claims significantly as we are measuring our ability to identify performant configurations of a program, not to optimise the program to enable more performant configurations. To supplement `x264`, we have also chosen a benchmark from the CoreMark-PRO suite [@coremarkpro], `zip`. The CoreMark-PRO suite is considerably smaller than SPEC CPU, so we have chosen this benchmark as it is the largest in the suite - each other benchmark in CoreMark-PRO is too short to be profiled meaningfully. \todo{give numbers on this}.
+
+### Random Checkpoints
+
 \newpage
 
 ### Checkpoint Collection
@@ -568,13 +575,58 @@ Figure \hyperlink{methodology-diagram}{4.1} illustrates the complete process we 
 
 ## Results
 
-![A plot showing how variance of a set of SimPoint clusters varies with the interval size of the generated cluster. (todo: long explanation)](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
+![A plot showing how variance of SimPoint clusters decreases with interval size.](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
 
-![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are truncated.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
+![A plot showing how variance of a set of super-sampled SimPoints increases as interval width increases, but is still dwarfed by the variance of a set of random samples collected from across the benchmark program. This demonstrates shorter interval SimPoints with higher errors can still be useful in design space exploration as their error is consistant, and can be accounted for in the optimisation process.](./experiments/3_coremarkzip/plots/variance_clearer.svg)
 
-![](./experiments/3_coremarkzip/plots/error_pareto.svg)
+![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are used for truncation. It shows how truncated benchmarks produce similar error rates to traditional SimPoints that take longer to gather.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
 
-\todo{plot collected timing data}
+![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a random sampling metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
+
+# Bayesian Optimisation
+
+We perform experiments with the following scenario:
+
+```json
+{
+	"application_name": "simpoint",
+	"optimization_objectives": ["performance", "energy"],
+
+	"design_of_experiment": {
+		"doe_type": "random sampling",
+		"number_of_samples": 10
+	},
+	"optimization_iterations": 49,
+	"evaluations_per_optimization_iteration": 10,
+
+	"models": {
+		"model": "random_forest"
+	},
+
+	"input_parameters": {
+		"rob_size": {
+			"parameter_type": "ordinal",
+			"values": [16, 32, 64, 128, 256, 512]
+		},
+		"lq_size": {
+			"parameter_type": "ordinal",
+			"values": [4, 16, 64, 128, 256]
+		},
+		"sq_size": {
+			"parameter_type": "ordinal",
+			"values": [4, 16, 64, 128, 256]
+		},
+		"p_width": {
+			"parameter_type": "integer",
+			"values": [4, 12]
+		},
+		"interval": {
+			"parameter_type": "ordinal",
+			"values": [125000]
+		}
+	}
+}
+```
 
 # Future Work
 
