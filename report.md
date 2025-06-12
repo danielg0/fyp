@@ -583,7 +583,7 @@ Figure \hyperlink{methodology-diagram}{4.1} illustrates the complete process we 
 
 ![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a random sampling metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
 
-# Bayesian Optimisation
+# Design-space Exploration with Short SimPoints
 
 We perform experiments with the following scenario:
 
@@ -693,11 +693,13 @@ We believe there are no significant ethical considerations to be made regarding 
 
 ## Sustainability {.unnumbered}
 
+This research has required substantial amounts of computation to profile benchmark binaries, take checkpoints for our various methods and carry out simulations to compute performance metric estimates. To give one example, a complete run of the SPEC `x264` binary to calculate baseline metric values to compare our estimates against required over 24 hours of CPU time on our test machine. We have made attempts to reduce this through reuse of data, for instance by reusing checkpoints we collected to evaluate sub-sampling ({@sec:results}) when carrying out design-space exploration experiments with HyperMapper ({@sec:design-space-exploration-with-short-simpoints}).
+
+The environmental cost of this research is justified by the decrease in simulation time we have demonstrated in our new techniques, which will reduce the environment impact of future research that utilises it.
+
 ## Availability of Data and Materials {.unnumbered}
 
-\todo{how much of this could move to methodology?}
-
-Makefiles and scripts used to generate our results are available publicly on GitHub ([https://github.com/danielg0/fyp](https://github.com/danielg0/fyp)), where you can also find the R code used to produce the plots we have presented and the Pandoc-flavoured Markdown used to write this report.
+The Makefiles and scripts used to generate our results are available publicly on GitHub ([https://github.com/danielg0/fyp](https://github.com/danielg0/fyp)), where you can also find the R code used to produce the plots we have presented in this thesis and the Pandoc-flavoured Markdown used to write this report.
 
 Results in this thesis are collected using [Gem5 stable v24.1.0.3](https://github.com/gem5/gem5/releases/tag/v24.1.0.3), with a change to fix a bug where resuming from a SimPoint checkpoint in a folder containing more than one hundred checkpoints picks incorrectly. We have shared our patch on GitHub ([https://github.com/danielg0/gem5](https://github.com/danielg0/gem5)).
 
