@@ -572,6 +572,8 @@ Figure \hyperlink{methodology-diagram}{4.1} illustrates the complete process we 
 
 ![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are truncated.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
 
+![](./experiments/3_coremarkzip/plots/error_pareto.svg)
+
 \todo{plot collected timing data}
 
 # Future Work

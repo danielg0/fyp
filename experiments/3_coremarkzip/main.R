@@ -3,8 +3,15 @@ library(scales)
 library(ggthemes)
 
 library(showtext)
-font.add("Latin Modern Roman", "/usr/share/fonts/OTF/lmroman12-regular.otf")
+font.add("Latin Modern Roman", "/usr/share/fonts/OTF/lmroman10-regular.otf")
 showtext.auto()
+
+pareto_front <- function(x, y) {
+	df = data.frame(x = x, y = y)
+	ordered_df = df[order(df$x, df$y, decreasing=FALSE),]
+	front = ordered_df[which(!duplicated(cummin(ordered_df$y))),]
+	front
+}
 
 data <- read_csv("results/results.csv")
 spec_data <- read_csv("../2.1_test/results/results.csv")
@@ -19,7 +26,7 @@ variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_v
 #	geom_violin(scale = "width") +
 #	geom_hline(aes(yintercept = ipc_mean), mean_variance, colour = "red") +
 
-	geom_boxplot(outliers = FALSE) +
+	geom_boxplot(outliers = FALSE, width=0.5) +
 
 	geom_jitter(alpha=0.25, width = 0.125) +
 #	geom_point() +
@@ -29,19 +36,19 @@ variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_v
 
 #	scale_x_continuous(transform = "log2", breaks = seq(1000, 32000, by=1000),
 #		labels = c("1000", "2000", "", "4000", rep("", 3), "8000", rep("", 7), "16000", rep("", 15), "32000")) +
-	scale_x_continuous(breaks = c()) +
+	scale_x_continuous(breaks = c(), lim=c(-0.3, 0.3)) +
 	facet_grid(cols = vars(interval), labeller = labeller(interval = \(xs)label_comma()(map_vec(xs, as.integer)))) +
 	labs(x = "Interval Size (instructions)", y = "Variance of Cluster Point's IPC") +
-	theme_few(base_family="Latin Modern Roman") + scale_colour_few()
+	theme_few(base_family="Latin Modern Roman", base_size=10) + scale_colour_few()
 
-ggsave("plots/variance_by_interval_ipc.svg", width=10, height=5)
+ggsave("plots/variance_by_interval_ipc.svg", width=15, height=7, unit="cm")
 
 # calculate weighted average
 selected <- (filter(data, index == 0) %>%
 # interval used for simulation interval (ie. the number of instructions executed)
 # width is the group of weights we should use
 # add on subsampled data
-	mutate(source = "Super-sample", width = interval) %>%
+	mutate(source = "Super-sample", width = interval, cputime=timing) %>% select(!timing) %>%
 # fix off-by-one in data. output folders use one-indexed gem5 checkpoint id and weights use zero-index simpoint cluster
 	bind_rows(read_csv("../5_downsampling/results.csv") %>% mutate(cluster = cluster - 1, source = "Truncated", width = 4000000)) %>%
 	bind_rows(read_csv("../5.1_x264/results.csv")       %>% mutate(cluster = cluster - 1, source = "Truncated", width = 4000000)))
@@ -52,14 +59,14 @@ weights <- bind_rows(weights, filter(spec_weights, benchmark == "spec.x264"))
 # rename interval column as width
 weights <- (mutate(weights, width = interval) %>% select(!interval))
 
-estimates <- selected %>% select(benchmark, interval, source, width, cluster, cpi, ipc) %>%
+estimates <- selected %>% select(!index) %>%
 	full_join(weights) %>% group_by(benchmark, interval, source) %>%
-	summarise(weighted_cpi = sum(cpi * weight), weighted_ipc = sum(ipc * weight))
+	summarise(weighted_cpi = sum(cpi * weight), weighted_ipc = sum(ipc * weight), cputime = sum(cputime))
 
 # get regular samples to compare to
 regular <- (bind_rows(read_csv("./regular.csv"), read_csv("../2.1_test/regular.csv")) %>%
 	    group_by(benchmark, interval) %>%
-	    summarise(weighted_cpi = mean(cpi, na.rm=TRUE), weighted_ipc = mean(ipc, na.rm=TRUE), ipc_var = var(ipc, na.rm=TRUE)) %>%
+	    summarise(weighted_cpi = mean(cpi, na.rm=TRUE), weighted_ipc = mean(ipc, na.rm=TRUE), ipc_var = var(ipc, na.rm=TRUE), cputime=sum(cputime)) %>%
 	    mutate(source = "Random"))
 
 reg_var <- ggplot(regular, aes(x = interval, y = ipc_var, colour=benchmark)) + geom_point()
@@ -83,5 +90,24 @@ ggplot(filter(error, source != "Random"), aes(x = interval, y = ipc_percent_erro
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
 	scale_x_continuous(labels = scales::label_comma()) +
 	labs(x = "Interval Width (instructions)", y = "IPC Error", colour = "Benchmark", linetype="Method") +
-	theme_few(base_family="Latin Modern Roman") + scale_colour_few()
-ggsave("plots/ipc_error_by_interval.svg", width=10, height=5)
+	theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom") + scale_colour_few()
+ggsave("plots/ipc_error_by_interval.svg", width=15, height=8, unit="cm")
+
+random_e <- filter(error, source == "Random")
+random_pf <- pareto_front(random_e$cputime, random_e$ipc_percent_error) 
+super_e <- filter(error, source == "Super-sample")
+super_pf <- pareto_front(super_e$cputime, super_e$ipc_percent_error)
+trunc_e <- filter(error, source == "Truncated")
+trunc_pf <- pareto_front(trunc_e$cputime, trunc_e$ipc_percent_error)
+
+ggplot(error, aes(x = cputime, y = ipc_percent_error, colour = source)) +
+       	geom_point() +
+	geom_step(data = random_pf, aes(x=x, y=y, colour="Random")) +
+	geom_step(data = super_pf, aes(x=x, y=y, colour="Super-sample")) +
+	geom_step(data = trunc_pf, aes(x=x, y=y, colour="Truncated")) +
+	scale_y_continuous(lim = c(0, max(error$ipc_percent_error)), labels = scales::label_percent()) +
+	scale_x_continuous(lim = c(0, max(error$cputime)), labels = scales::label_timespan(), breaks=c(0, 120, 240, 360, 480, 600)) +
+	labs(x = "CPU User Time", y = "IPC Error", colour = "Method") +
+	theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom") + scale_colour_few()
+ggsave("plots/error_pareto.svg", width=15, height=15, unit="cm")
+
