@@ -50,18 +50,6 @@ keywords={Optimization;Software;Space exploration;Computational modeling;Linear 
 doi={10.1109/MASCOTS.2019.00045}
 }
 
-@inproceedings{earlyVarianceSimpoints,
-author={Perelman, E. and Hamerly, G. and Calder, B.},
-booktitle={2003 12th International Conference on Parallel Architectures and Compilation Techniques},
-title={Picking statistically valid and early simulation points},
-year={2003},
-volume={},
-number={},
-pages={244-255},
-keywords={Computational modeling;Computer architecture;Clustering algorithms;Vectors;Frequency;Computer science;Pipelines;Computer simulation;Hardware;Application software},
-doi={10.1109/PACT.2003.1238020}
-}
-
 @article{simplescalar,
 author={Austin, T. and Larson, E. and Ernst, D.},
 journal={Computer},
@@ -291,3 +279,86 @@ month = nov,
 pages = {92–99},
 numpages = {8}
 }
+
+@article{simnet,
+author = {Li, Lingda and Pandey, Santosh and Flynn, Thomas and Liu, Hang and Wheeler, Noel and Hoisie, Adolfy},
+title = {SimNet: Accurate and High-Performance Computer Architecture Simulation using Deep Learning},
+year = {2022},
+issue_date = {June 2022},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {6},
+number = {2},
+url = {https://doi.org/10.1145/3530891},
+doi = {10.1145/3530891},
+journal = {Proc. ACM Meas. Anal. Comput. Syst.},
+month = jun,
+articleno = {25},
+numpages = {24},
+keywords = {gpu, deep learning, computer architecture simulation}
+}
+
+@article{tao,
+author = {Pandey, Santosh and Yazdanbakhsh, Amir and Liu, Hang},
+title = {TAO: Re-Thinking DL-based Microarchitecture Simulation},
+year = {2024},
+issue_date = {June 2024},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {8},
+number = {2},
+url = {https://doi.org/10.1145/3656012},
+doi = {10.1145/3656012},
+journal = {Proc. ACM Meas. Anal. Comput. Syst.},
+month = may,
+articleno = {28},
+numpages = {25},
+keywords = {computer architecture simulation, multi-task learning, program embeddings}
+}
+
+@article{livecache,
+title = {Enabling Reduced Simpoint Size Through LiveCache and Detail Warmup},
+journal = {BenchCouncil Transactions on Benchmarks, Standards and Evaluations},
+volume = {2},
+number = {4},
+pages = {100082},
+year = {2022},
+issn = {2772-4859},
+doi = {https://doi.org/10.1016/j.tbench.2022.100082},
+url = {https://www.sciencedirect.com/science/article/pii/S2772485922000692},
+author = {Jose Renau and Fangping Liu and Hongzhang Shan and Sang Wook Stephen Do},
+keywords = {Architecture, Simpoint, LiveCache, Detail-warmup, Simulation sampling, Cycle-accurate simulation, Microarchitecture simulation},
+abstract = {Simpoint technology (Sherwood et al., 2002) has been widely used by modern micro-architecture research community to significantly speedup the simulation time. However, the typical Simpoint size remains to be tens to hundreds of million instructions. At such sizes, the cycle-accurate simulators still need to run tens of hours or even days to finish the simulation, depending on the architecture complexity and workload characteristics. In this paper, we developed a new simulation framework by integrating LiveCache and Detail-warmups with Dromajo ( https://chipyard.readthedocs.io/en/latest/Tools/Dromajo.html) and Kabylkas et al. (2005), enabling us to use much smaller Simpoint size (2 million instructions) without loss of accuracy. Our evaluation results showed that the average simulation time can be accelerated by 9.56 times over 50M size and most of the workload simulations can be finished in tens of minutes instead of hours.}
+}
+
+@article{simpoint-warming,
+author = {Perelman, Erez and Hamerly, Greg and Van Biesbrouck, Michael and Sherwood, Timothy and Calder, Brad},
+title = {Using SimPoint for accurate and efficient simulation},
+year = {2003},
+issue_date = {June 2003},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {31},
+number = {1},
+issn = {0163-5999},
+url = {https://doi.org/10.1145/885651.781076},
+doi = {10.1145/885651.781076},
+abstract = {Modern architecture research relies heavily on detailed pipeline simulation. Simulating the full execution of a single industry standard benchmark at this level of detail takes on the order of months to complete. This problem is exacerbated by the fact that to properly perform an architectural evaluation requires multiple benchmarks to be evaluated across many separate runs. To address this issue we recently created a tool called SimPoint that automatically finds a small set of Simulation Points to represent the complete execution of a program for efficient and accurate simulation. In this paper we describe how to use the SimPoint tool, and introduce an improved SimPoint algorithm designed to significantly reduce the simulation time required when the simulation environment relies upon fast-forwarding.},
+journal = {SIGMETRICS Perform. Eval. Rev.},
+month = jun,
+pages = {318–319},
+numpages = {2},
+keywords = {SimPoint, clustering, fast-forwarding, sampling, simulation}
+}
+
+@INPROCEEDINGS{cool-sim,
+  author={Nikoleris, Nikos and Sandberg, Andreas and Hagersten, Erik and Carlson, Trevor E.},
+  booktitle={2016 International Conference on Embedded Computer Systems: Architectures, Modeling and Simulation (SAMOS)},
+  title={CoolSim: Statistical techniques to replace cache warming with efficient, virtualized profiling},
+  year={2016},
+  volume={},
+  number={},
+  pages={106-115},
+  keywords={Magnetic resonance imaging;Microarchitecture;Software;Benchmark testing;Computational modeling;Data models;Electronic mail},
+  doi={10.1109/SAMOS.2016.7818337}}
+

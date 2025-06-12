@@ -150,8 +150,6 @@ These simulators are all open-source, with their code and documentation availabl
 
 Both SimpleScalar and gem5 provide different CPU models that span a spectrum between:
 
-\todo{trace simulation?}
-
 - Fast functional simulators that emulate just the instruction set of a machine such as gem5's `AtomicCPU` and SimpleScalar's `sim-fast`, which can achieve simulation speeds of 6 MIPS[^mips] [@simplescalar, Table 1], whilst collecting information on the flow of execution.
 
 - Slower microarchitecture simulators that can track out-of-order scheduling, data hazards, functional units, cache hierarchies, etc. to produce accurate values for IPC[^ipc] when executing a given program. These cycle-accurate models include gem5's O3 model and SimpleScalar's `sim-outorder` which simulates at speeds of 0.3 MIPS.
@@ -165,7 +163,9 @@ Where gem5 differs from zsim is in the approach taken to executing instructions.
 
 ### DL-based Simulators
 
-Recently, 
+One recent development in the microarchitecture simulation space is in the use of machine learning to train models that can predict latencies [@simnet; @tao]. Deep Learning (DL) is performed on an execution trace that contains the static features of each instruction, such as target/source registers and branch type, as well as the architecture context, made up of instruction context, including flags for memory dependancy, and history context, containing information on recent branch mispredictions and data accesses. Having been trained on one program's trace and corresponding timings, the model can be used on other programs to estimate their timings (fetch, execution and store latencies).
+
+The trained model can be run on a GPU and achieve simulation speeds faster than traditional CPU simulators - on SPEC benchmarks an overall speedup (ie. including training) of 3.66x versus Gem5 was measured by [@tao, table 4]. However, the model is specific to that particular microarchitecture configuration, so changes to its parameters require the model to be retrained. As a result, a simulator of this design is not appropriate for the use-case we envision, testing many different microarchitecture configurations on the same program.
 
 ### Abbreviated Runs
 
@@ -191,7 +191,7 @@ Many simulators offer both accurate cycle-level models and fast functional model
 
 ### Statistical Sampling
 
-Both random and periodic sampling are statistical sampling techniques that build upon existing mathematical theory, such as the central limit theorem, which is explained below.
+Both random and periodic sampling are statistical sampling techniques that build upon existing mathematical theory, such as the central limit theorem, which is explained in this section.
 
 The central limit theorem states that if sufficient independent observations are taken of a population (in practice, more than thirty) with a finite variance $\sigma^2$ and mean $\mu$, then the distribution of the sample mean $\bar{x}$ approximates a normal distribution with mean $\mu$ and variance $\sigma^2 \over n$, irrespective of how the population is distributed.
 
@@ -223,7 +223,7 @@ Once we know how large to make the sample, the SMARTS technique involves alterna
 
 One practical concern to handle when switching between functional and cycle-accurate simulation is warming up the processor. Modern processors contain a lot of internal state essential for achieving good performance, including branch predictors for prefetching upcoming instructions and multiple levels of caching to speed up accesses with temporal locality, that is not maintained during functional simulation. As such, if nothing is done they will be stale or "cold" upon switching to the cycle-accurate simulation, leading to an increase in cache misses and branch mispredictions that would not occur in a complete execution. Without warm-up, these misses and mispredications would increase the error in estimated performance metrics.
 
-How best to solve this has been the subject of research. [@samplestartcontextswitch] proposed a method where samples start being collected only after a context switch, under the assumption that at least for smaller caches, the cache will be flushed during the switch. [@reversestatereconstruction] suggests tracking the data that is needed for reconstructing architecture state during functional simulation, so that once the switch to cycle- accurate simulation is made, the processor structures can be filled back up in reverse. SMARTS approaches this problem in two ways: with detailed warming and with functional warming.
+How best to solve this has been the subject of much research. [@samplestartcontextswitch] proposed a method where samples start being collected only after a context switch, under the assumption that at least for smaller caches, the cache will be flushed during the switch. [@reversestatereconstruction] suggests tracking the data that is needed for reconstructing architecture state during functional simulation, so that once the switch to cycle- accurate simulation is made, the processor structures can be filled back up in reverse. [@simplescalar] has an option to give each piece of architectural state a warmup bit; when switching from functional simulation, this bit is set for all structures. The first time that structure is accessed, the bit is unset and the access is assumed to be sucessful, the intuition being that most structures have high hit rates. SMARTS approaches this problem in two ways: with detailed warming and with functional warming.
 
 Before each sample of size $n$, SMARTS has a period of detailed simulation of size $w$ that is not recorded, called detailed warming. This period fills the cache back up with fresh information so that the sample is executing in an environment as close to reality as possible. Picking a value for $w$ is tricky, as it adds a lot of cost to the overall simulation and the best value is highly dependant on the program being executed, so [@smarts-paper] also introduced the concept of functional warming, a middle point between functional simulation and detailed warming. By augmenting the functional simulator model with the ability to maintain some of the microarchitecture state, notably the branch predictor and caches, $w$ can be reduced at the cost of a "small" slowdown in-between samples[^slowdown].
 
@@ -239,7 +239,7 @@ The resulting sampling looks as follows:
 
 ### SimPoint
 
-SimPoint is a representative sampling technique that tracks the code executed by a program and uses that to decide where to sample in order to include all the behaviours it exhibits. This section will introduce the technique and discuss some further research to extend its functionality.
+SimPoint [@simpoint1] is a representative sampling technique that tracks the code executed by a program and uses that to decide where to sample in order to include all the behaviours it exhibits. This section will introduce the technique and discuss some further research to extend its functionality.
 
 ![A summary of the original SimPoint [@simpoint1] process](diagrams/simpoint-overview.drawio.svg){#fig:simpoint-summary}
 
@@ -253,9 +253,9 @@ SimPoint is composed into three parts, collection of a program trace, use of tha
 
 4. Group the BBVs using $k$-means clustering ({@sec:k-means-clustering}), which identifies the phases in the program
 
-5. Pick a BBV, and corresponding interval, closest to the centre of each cluster to represent it, recording the proportion of BBVs in that cluster
+5. Pick a BBV, and corresponding interval, closest to the centre of each cluster to represent it as its "SimPoint", taking care to also record the proportion of BBVs in that cluster
 
-To produce a final performance metric, we do a detailed simulation of the chosen BBVs for each cluster, collecting performance metrics of interest. We then weight the performance metrics of each phase by the proportion of BBVs in that phase's cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation.
+To produce a final performance metric, we do a detailed simulation of the chosen SimPoints for each cluster, collecting performance metrics of interest. We then weight the performance metrics of each phase by the proportion of BBVs in that phase's cluster. One advantage SimPoints has over statistical sampling techniques is that as it has more information on the execution of the program, it can take less samples than SMARTS might and still produce an accurate estimate, reducing the required runtime of our simulation [@smarts-paper, Ch 5.3].
 
 #### Basic Blocks
 
@@ -336,7 +336,7 @@ $k$-Means clustering iteratively splits BBVs into $k$ sets, where $k$ is chosen 
 
 These two steps are repeated until which BBVs are assigned to which clusters stops changing. The BBV closest to each cluster’s centre is the one used to represent the whole cluster. In addition to recording that, the number of BBVs in each cluster is recorded. Estimating a performance metric then consists of fast-forwarding to the start of each clusters representative BBV using a functional simulator model[^warming], recording that metric during the sampled interval, and fast-forwarding to the next cluster. Once collected, the metrics for each cluster are combined into an average weighted by the number of BBVs in each cluster. For instance, given a clustering, $C$, and an array of collected metrics, $M$, we can calculate a final estimate for the metric, $E$, as follows:
 
-[^warming]: No consideration is needed for warming up architecture state as SimPoint has larger simulation intervals than SMART [@smarts-paper, Ch 5.3].
+[^warming]: Whether warming up architecture state is needed with SimPoint is a point of contention - [@smarts-paper, Ch 5.3] argues that as SimPoint has larger simulation intervals than SMARTS it's unneeded, whereas the original authors gave options for using the SimPoint approach both with and without warmup [@simpoint-warming] and more recently, [@livecache] has shown that by using warmup.
 
 $$C = \left\{c_1: [BBV_1, BBV_5, \ldots], c_2: [BBV_2, BBV_4, \ldots], \ldots, c_k: [BBV_3, BBV_9, \ldots]\right\}$$
 
@@ -422,13 +422,13 @@ In the optimal configuration, where the input interval size is a factor of every
 
 For non-optimal configurations of intervals we add to $is$ the greatest common factor of each interval in $is$ and carry out the steps above. We posit this does not add much simulation cost to the overall generation as the interval size does not have a large impact on overall simulation time. To test this hypothesis, we took the `zip` benchmark from the CoreMark-PRO suite [@coremarkpro] and collected BBV arrays for several interval sizes using Gem5 [@gem5], measuring the user CPU time spent gathering each one (for further details on our methodology and test machine see {@sec:methodology}).
 
-Our results are plotted in {@fig:cputime-vs-interval-plot}, which show there is not a large cost to decreasing the width of collected BBVs. A reduction in interval size from 4 million instructions to 0.5 million, creating octuple the number of BBVs, increased simulation time by 541 seconds, a rise of 8.56% (3sf.).
+The results plotted in {@fig:cputime-vs-interval-plot} show there is not a large cost to decreasing the width of collected BBVs. A reduction in interval size from 4 million instructions to 0.5 million, creating eight times the number of BBVs, increased simulation time by 8.56% (3sf.), a rise of less than ten minutes.
 
-![A plot of the CPU time taken to simulate and output a BBV array for the `zip` benchmark from [@coremarkpro] using Gem5 [@gem5] for a range of BBV widths](experiments/4_simcostofintervalwidth/plots/cpu_user_time_vs_interval_width.svg){#fig:cputime-vs-interval-plot}
+![A plot of the CPU time taken to simulate and output a BBV array for the `zip` benchmark from [@coremarkpro] using Gem5 [@gem5] for a range of BBV widths.](experiments/4_simcostofintervalwidth/plots/cpu_user_time_vs_interval_width.svg){#fig:cputime-vs-interval-plot}
 
 The super-sampling process we have described here creates BBV arrays of a variety of interval sizes from a single profiling with no loss in accuracy compared to the standard SimPoint approach. This saves computation time profiling the same binary multiple times.
 
-[^gem5_asterisk]: In our experimentation, we noticed that when profiling with Gem5 [@gem5], the number of instructions covered (ie. the sum of all the components) by the BBVs it output would exceed or fall short of the target interval size by a couple instructions. This is unlikely to affect the accuracy of the SimPoint process, but does cause upscaled BBV arrays to not exactly match those generated directly.
+[^gem5_asterisk]: In our experimentation, we noticed that when profiling with Gem5 [@gem5], the number of instructions covered (ie. the sum of all the components) by the BBVs it output would exceed or fall short of the target interval size by a couple of instructions. This is unlikely to affect the accuracy of the SimPoint process, but does cause upscaled BBV arrays to not exactly match those generated directly.
 
 <!--
 ## Sub-sampling
@@ -453,23 +453,27 @@ Dividing BBVs equally this way has a similar proportional effect on the $k$-mean
 > Take an arbitrary $k$-means clustering of vectors $\mathbb{C}$ and assume that it is stable, as in {@fig:clustering_scaling}\medspace\ding{172}. Each cluster $C \in \mathbb{C}$ has a non-empty multiset of member vectors ${C = \{v_1, v_2, \ldots, v_{|C|}\}}$ each of cardinality $B$, the number of basic blocks in the program, and each cluster $C$ also has a centre $c = [c_1, c_2, \ldots, c_B]$, given by:
 > $$c = {v_1 + v_2 + \ldots + v_{|C|} \over {|C|} }$$
 > Let the closest vector in $C$ to the centre $c = [c_1, c_2, \ldots, c_B]$ be $v^\star = [i^\star_1, i^\star_2, \ldots, i^\star_B]$. There is no point $v \in C \setminus \{v^\star\}$ with components $v = [i_1, i_2, \ldots, i_B]$, such that:
-> $$\begin{aligned} |v - c| &< |v^\star - c| \\
+> $$\begin{aligned} |v - c| &< |v^\star - c| \quad \textnormal{(\ding{61})} \\
 \sqrt{(i^{\empty}_1 - c_1)^2 + (i_2 - c_2)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{(i^\star_1 - c_1)^2 + (i^\star_2 - c_2)^2 + \ldots + (i^\star_B - c_B)^2} \end{aligned}$$
 > As the clustering is stable, each point is assigned to its closest centre. That is to say, for some point $v$ in a cluster $C \in \mathbb{C}$ with centre $c$, there is no other cluster $C' \in \mathbb{C} \setminus \{C\}$ with centre $c'$ such that:
-> $$|v - c'| < |v - c|$$
+> $$|v - c'| < |v - c| \quad \textnormal{(\ding{81})}$$
 > Then, for arbitrary factor $f > 0$, scale every vector by $1 \over f$ to produce $f$ new vectors, like {@fig:clustering_scaling}\medspace\ding{173}, where each plus represents $f$ overlapping basic block vectors:
 > $$\begin{aligned} w_{1.1}, w_{1.2}, \ldots, w_{1.f} &= {v_1 \over f} = \left[{i_0 \over f}, {i_1 \over f}, \ldots, {i_B \over f}\right] \\
 w_{2.1}, w_{2.2}, \ldots, w_{2.f} &= {v_2 \over f} \\
 &\ldots \end{aligned}$$
+>
 > Create a new set of clusters $D \in \mathbb{D}$, assigning each new vector to the same multiset cluster its original vector was a part of:
 > $$v_1 \in C_i \quad \Rightarrow \quad \{w_{1.1}, w_{1.2}, \ldots, w_{1.f}\} \subseteq D_i$$
 > Therefore, the size of each new cluster $|D_i| = f|C_i|$. We can calculate the centre of each new cluster $D \in \mathbb{D}$, $d$, and express it in terms of the centre of its original, $c$, as follows:
+>
 > $$\begin{aligned} d &= {w_{1.1} + \ldots + w_{1.f} + w_{2.1} + \ldots + w_{2.f} + \ldots + w_{{|C|}.f} \over |D_i|} \\
 & \textnormal{Substitute each scaled term }w_{m.n}\textnormal{ for }{v_m \over f}: \\
 \Rightarrow \quad d &= {\overbrace{{v_1 \over f} + \ldots + {v_1 \over f}}^{f\textnormal{ terms}} + \overbrace{{v_2 \over f} + \ldots + {v_2 \over f}}^{f\textnormal{ terms}} + \ldots + \overbrace{{v_{|C|} \over f} + \ldots + {v_{|C|} \over f}}^{f\textnormal{ terms}} \over f|C_i|} \\
 \Rightarrow \quad d &= {v_1 + v_2 + \ldots + v_{|C|} \over f|C_i|} = {1 \over f}{v_1 + v_2 + \ldots + v_{|C|} \over |C_i|} = {c \over f}\\
 \end{aligned}$$
+>
 > Let $w^\star \in D$ be one member of the group of vectors scaled down from $v^\star \in C$, they are all equal, so $w^\star = {v^\star \over f} = [j^\star_1, j^\star_2, \ldots, j^\star_B]$. We will now show by contradiction that $w^\star$ is the vector that is closest to its assigned cluster's centre, $d$.
+>
 > $$\begin{aligned} \textnormal{Assume a vector }w \in C \setminus &\{w^\star\} \textnormal{ is closer to }d\textnormal{ than }w^\star\textnormal{:} \\
 |w - d| &< |w^\star - d| \\
 \Rightarrow \quad \left|w - {c \over f}\right| &< \left|w^\star - {c \over f}\right| \\
@@ -479,9 +483,10 @@ w_{2.1}, w_{2.2}, \ldots, w_{2.f} &= {v_2 \over f} \\
 \Rightarrow \quad \sqrt{1\over f^2}\sqrt{(i_1 - c_1)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{1 \over f^2}\sqrt{(i^\star_1 - c_1)^2 + \ldots + (i^\star_B - c_B)^2} \\
 \Rightarrow \quad \sqrt{(i_1 - c_1)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{(i^\star_1 - c_1)^2 + \ldots + (i^\star_B - c_B)^2} \\
 \Rightarrow \quad |v - c| &< |v^\star - c| \end{aligned}$$
-> This contradicts with $v^\star$ being the closest vector to its cluster's centre $c$, so reject our assumption that there exists a $w$ closer to $d$ than $w^\star$ and instead take that $w^\star$ is the closest vector to $d$.
 >
-> Similarly, we can show that the clustering is stable with a proof by contradiction. Assume that one of the new scaled vectors assigned to $D$ is closer to a new cluster $D' \in \mathbb{D} \setminus \{D\}$ than $D$. Use this to show that the corresponding original vector would also be closter to $C$ than $C'$. This contradicts with the original being stable, so the new cluster $D$ must also be stable.
+> This contradicts with $v^\star$ being the closest vector to its cluster's centre $c$\medspace(\ding{61}), so we reject our assumption that there exists a $w$ closer to $d$ than $w^\star$ and instead take that $w^\star$ is the closest vector to $d$.
+>
+> Similarly, we can show that the clustering is stable with a proof by contradiction. Assume that one of the new scaled vectors assigned to $D$ is closer to a new cluster $D' \in \mathbb{D} \setminus \{D\}$ than $D$. Use this to show that the corresponding original vector would also be closter to $C$ than $C'$. This contradicts with the original clustering $\mathbb{C}$ being stable\medspace(\ding{81}), so the new clustering $\mathbb{D}$ must also be stable.
 >
 > Combining these properties, we have shown that $\mathbb{D}$ is a stable clustering of the vectors in $\mathbb{C}$ scaled by factor $f$, where the closest vectors to each cluster's centre - the SimPoint picked to represent that cluster - in $\mathbb{D}$ are those scaled from the vector closest to the corresponding cluster in $\mathbb{C}$. This is visualised in {@fig:clustering_scaling}\medspace\ding{174}.
 
@@ -512,7 +517,7 @@ x86 benchmark binaries are built with GCC 15.1.1 (installed through `dnf` packag
 
 ### Warm-up Periods
 
-Research (...) has been on various approaches to SimPoint warm-up, from ... to ... Evaluating which of these approaches is best is outside of the scope of this project, so in each of our experiments there is a single fixed warm-up value, and all checkpoints are taken with that amount of warm-up, except for those checkpoints taken from the beginning of a program where there is no preceding execution to use as warm-up. For those, we simulate the program from the beginning and set Gem5's `--maxinsts` argument to the intended interval width. Selecting a SimPoint at the beginning of a program occurs fairly commonly across our experiments, likely due to how initialisation exhibits different behaviours (system calls to open files, parsing command-line arguments, etc.) from the rest of a program's execution, though it is typically given a low weighting due to the small proportion of execution it characterises.
+There are several views in the literature on the need for warmup when using SimPoint checkpoints and what an appropriate amount is [@smarts-paper; @simpoint-warming; @livecache; @cool-sim]. Evaluating which of these approaches is best is outside of the scope of this project, so in each of our experiments there is a single fixed warm-up value, and all checkpoints are taken with that amount of warm-up, except for those checkpoints taken from the beginning of a program where there is no preceding execution to use as warm-up. For those, we simulate the program from the beginning and set Gem5's `--maxinsts` argument to the intended interval width. Selecting a SimPoint at the beginning of a program occurs fairly commonly across our experiments, likely due to how initialisation exhibits different behaviours (system calls to open files, parsing command-line arguments, etc.) from the rest of a program's execution, though it is typically given a low weighting due to the small proportion of execution it characterises.
 
 ### Benchmark Selection
 
