@@ -97,6 +97,13 @@ parser.add_argument(
 	required = True,
 )
 
+parser.add_argument(
+	"--scenario",
+	type = pathlib.Path,
+	help = "The path to the scenario",
+	default = "./scenario.json",
+)
+
 args = parser.parse_args()
 args.log.write(str(args) + "\n")
 
@@ -105,18 +112,15 @@ args.log.write(str(args) + "\n")
 # weights is a dict of interval -> {a dict of cpt_id -> its weight}
 weights = {}
 for inWeight in args.weightfile:
-	try:
-		interval_s, weightpath = inWeight.split(",")
-		interval = int(interval_s)
-		weights[interval] = {}
-		weightfile = open(weightpath, "r")
-		for simpoint in weightfile:
-			weight_s, cpt_id_s = simpoint.split(" ")
-			weight = float(weight_s)
-			cpt_id = int(cpt_id_s)
-			weights[interval][cpt_id] = weight
-	except:
-		args.log.write("Got error parsing while processing weight '" + inWeight + "'\n")
+	interval_s, weightpath = inWeight.split(",")
+	interval = int(interval_s)
+	weights[interval] = {}
+	weightfile = open(weightpath, "r")
+	for simpoint in weightfile:
+		weight_s, cpt_id_s = simpoint.split(" ")
+		weight = float(weight_s)
+		cpt_id = int(cpt_id_s)
+		weights[interval][cpt_id] = weight
 baseline = max(weights.keys())
 
 # run gem5 once with given parameters and then pass through mcpat to get power/area
@@ -378,4 +382,4 @@ def run_parallel_gem5(base_params):
 
 args.data_out.write("order,rob_size,lq_size,sq_size,p_width,energy,performance,time,energy_baseline,performance_baseline\n")
 args.data_out.flush()
-hypermapper.optimizer.optimize("../../scenario.json", run_parallel_gem5)
+hypermapper.optimizer.optimize(str(args.scenario), run_parallel_gem5)
