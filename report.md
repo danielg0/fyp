@@ -379,6 +379,12 @@ $$\textit{EarlySP} = \textnormal{BIC} \times \left(1 - {\textit{StartLastCluster
 
 Once a value of $k$ and a BBV clustering has been decided using this new BIC, an upper bound on how far through the binary we will to simulate is determined by picking an early sample from the cluster whose centre is latest in the binary. This early sample is picked by ordering all the BBVs for that latest cluster by Euclidean distance to the centre, then picking the BBV from the top 1% that occurs earliest. Then, when picking simulation points from other clusters, we limit our choice to BBVs that occur before this upper bound, otherwise following the standard SimPoint procedure in picking the closest BBV to the centre of each cluster.
 
+#### 99% SimPoint Coverage
+
+The original SimPoint process considers the number of clusters picked, but not their relative sizes - its possible to end up with a cluster that accounts for a very small proportion of simulation time so long as it fits the BBVs well. This results in additional expensive simulations to gather metrics that do not have a great effect on the final weighted metric estimate. [@simpoint3] poses a solution to this issue - filter SimPoints to only those that represent a majority of execution.
+
+#### SimPoint Variance
+
 #### Limitations
 
 As the collection of BBVs requires identifying all the basic blocks in a program, we’re limited to analysing non-self-modifying binaries. For just-in-time (JIT) compiled programs, recompilation of a function with optimisations enabled will obscure the similarity in code calling that function after from those calls before the recompilation, and reuse of code cache in long-running programs could create false similarity between unrelated intervals. This hinders the ability of the SimPoint approach to identify phases accurately.
