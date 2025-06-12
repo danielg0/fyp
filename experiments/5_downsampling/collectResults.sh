@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Output csv headers
-echo benchmark,interval,cluster,cpi,ipc
+echo benchmark,interval,cluster,cpi,ipc,cputime
 
 # Find every stat in the out folder
 for statfile in $(find out/ -name "stats.txt")
@@ -22,7 +22,9 @@ do
 		ipc=$(grep "switch_cpus\.ipc" $statfile | tail -n 1 | awk '{print $2;}')
 	fi
 
+	time=$(grep -Po "\d+\.\d+(?=user)" ${statfile/stats.txt/truncate.timing})
+
 	# cut out/ and stats.txt from name
 	case=$(echo $statfile | cut -d "/" -f 2-4 --output-delimiter ",")
-	echo $case,$cpi,$ipc
+	echo $case,$cpi,$ipc,$time
 done

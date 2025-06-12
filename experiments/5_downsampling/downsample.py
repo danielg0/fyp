@@ -98,6 +98,11 @@ def run_checkpoint(index):
 			"--checkpoint-dir", str(args.work_folder / "checkpoints")
 		])
 
+	# timing
+	command.insert(0, "/usr/bin/time")
+	command.insert(1, "--output")
+	command.insert(2, str(resultdir / "truncate.timing"))
+
 	with open(resultdir / "log.log", "w") as log:
 		with open(resultdir / "err.log", "w") as err:
 			print(command)
