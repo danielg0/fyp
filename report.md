@@ -46,17 +46,16 @@ fignos-cleveref: true
 <!-- manually encode abstract & toc to get order right -->
 
 ```{=latex}
-\pagecolor{white}
 \begin{abstract}
 ```
 
-Fast evaluation of new hardware ideas is crucial for effective research in processor microarchitecture. Simulations of benchmark programs are an important tool to achieve this and representative sampling techniques, such as SimPoint, accelerate this process by profiling a program to identify subsets of it that are representative of the whole execution. Previous work has shown that estimates of performance metrics gathered by simulating just those selected intervals can be very accurate if they are sufficiently long.
+Fast evaluation of new hardware ideas is crucial for effective research in processor microarchitecture. Simulations of benchmark programs are an important tool to achieve this; and representative sampling techniques, such as SimPoint, accelerate this process by profiling a program to identify subsets of it that are representative of the whole execution. Previous work has shown that estimates of performance metrics gathered by simulating just those selected intervals can be very accurate if they are sufficiently long.
 
 This thesis introduces a technique for combining short and long simulation intervals with parameter optimisation methods from the ML domain to efficiently measure the effect of hardware changes. Our main contributions include:
 
 - Investigating the trade-off between error and simulation time present when choosing a simulation interval's size.
 
-- Discussing interval sub-sampling and super-sampling techniques to efficiently generate new simulation intervals from existing profiling runs. These techniques result in a Y% decrease in CPU time required to pick simulation points.
+- Introducing interval sub-sampling and super-sampling techniques to efficiently generate new simulation intervals from existing profiling runs. These techniques result in a Y% decrease in CPU time required to pick simulation points.
 
 - Demonstrating the viability of combining multiple simulation interval sets of different sizes with modern ML techniques for parameter optimisation to efficiently find performant configurations.
 
