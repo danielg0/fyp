@@ -70,15 +70,16 @@ Our discussions lay the path for future exploration into the variance of SimPoin
 \end{abstract}
 ```
 
-<!--
 ```{=latex}
 \renewcommand{\abstractname}{Acknowledgements}
 \begin{abstract}
 ```
+
+I would like to give many thanks to Paul, Jacky and Luke for their abundant support and advice throughout this project. I am also grateful to my family and friends for their constant encouragement, without which I would not be in the place I am today.
+
 ```{=latex}
 \end{abstract}
 ```
--->
 
 ```{=latex}
 \tableofcontents
