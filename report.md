@@ -115,7 +115,7 @@ This thesis:
 
 - Evaluates our new design space exploration method on a CoreMark-PRO [@coremarkpro] benchmark ({@sec:todo}) demonstrating we find Pareto fronts X% faster than with a random search, concluding with a discussion on how future research could make use of the work we have done to make effective use of limited computation budgets ({@sec:todo}).
 
-\todo{Technique Overview \& Applications}
+<!--\todo{Technique Overview \& Applications}-->
 
 <!--
 
@@ -174,7 +174,8 @@ The trained model can be run on a GPU and achieve simulation speeds faster than 
 
 Evaluating a whole benchmark suite with a simulator's cycle-accurate model is temporally expensive, requiring weeks or months of CPU time for a single run, but simulating with a functional model will not produce as accurate performance metric values. To alleviate this, we could run our functional simulator for several hundred million instructions to skip the program initialisation, then switch to our cycle-accurate simulator and continue running for hundreds of millions of instructions, using that model to collect a final performance metric. In 2003, [@smarts-paper] observed that "more than half of [papers in the last year] in top-tier computer architecture conferences presented performance claims extrapolated from abbreviated runs", but this approach can produce misleading results, as it may not accurately represent long-term program behaviour [@abbrunsinaccurate].
 
-Instead, modern research \todo{find examples of research} uses several different sampling methods that are based on statistical theory or on profiling the target program to learn about its behavior during execution.
+<!-- todo find examples of research -->
+Instead, modern research uses several different sampling methods that are based on statistical theory or on profiling the target program to learn about its behavior during execution.
 
 ## Sampled Simulation Techniques
 
@@ -538,7 +539,7 @@ There are several views in the literature on the need for warm-up when using Sim
 
 ### Benchmark Selection
 
-In order to calculate the error of the IPC estimates our techniques produce, we will need to perform a full cycle-accurate simulation of the benchmark programs we test. Given the limited time available to complete this project, we have therefore chosen to evaluate our approach using one of the shorter benchmarks from the SPEC CPU 2017 benchmark suite [@speccpu2017], `x264`. We are executing `x264` on its test workload to further reduce execution time - this means we cannot compare our metrics to previous reseach, but does not affect the validity of our claims significantly as we are measuring our ability to identify performant configurations of a program, not to optimise the program to enable more performant configurations. To supplement `x264`, we have also chosen a benchmark from the CoreMark-PRO suite [@coremarkpro], `zip`. The CoreMark-PRO suite is considerably smaller than SPEC CPU, so we have chosen this benchmark as it is the largest in the suite - each other benchmark in CoreMark-PRO is too short to be profiled meaningfully. \todo{give numbers on this}.
+In order to calculate the error of the IPC estimates our techniques produce, we will need to perform a full cycle-accurate simulation of the benchmark programs we test. Given the limited time available to complete this project, we have therefore chosen to evaluate our approach using one of the shorter benchmarks from the SPEC CPU 2017 benchmark suite [@speccpu2017], `x264`. We are executing `x264` on its test workload to further reduce execution time - this means we cannot compare our metrics to previous reseach, but does not affect the validity of our claims significantly as we are measuring our ability to identify performant configurations of a program, not to optimise the program to enable more performant configurations. To supplement `x264`, we have also chosen a benchmark from the CoreMark-PRO suite [@coremarkpro], `zip`. The CoreMark-PRO suite is considerably smaller than SPEC CPU, so we have chosen this benchmark as it is the largest in the suite - each other benchmark in CoreMark-PRO is too short to be profiled meaningfully.
 
 ### Random Checkpoints
 
@@ -618,9 +619,11 @@ Figure \hyperlink{methodology-diagram}{4.2} illustrates the complete process we 
 
 ## Results
 
-We start by 
+We start by exploring how interval size affects the variance of a set of SimPoints. Low variance in a set of SimPoints is important as 
 
-![A plot showing how the variance of a ste of SimPoints is affected by its interval size, where the variance of a SimPoint cluster is approximated by calculating the variance of the performance metrics obtained by simulating the ten BBVs closest to that cluster's centre. We collected an array of BBVs that was 125000 instructions wide and then upscaled it ({@sec:super-sampling}) to produce BBVs for each other interval size.
+Moving on to consider the error rate of our truncated checkpoints
+
+![A plot showing how the variance of a set of SimPoints is affected by its interval size, where the variance of a SimPoint cluster is approximated by calculating the variance of the performance metrics obtained by simulating the ten BBVs closest to that cluster's centre. We collected an array of BBVs that was 125000 instructions wide and then upscaled it ({@sec:super-sampling}) to produce BBVs for each other interval size.
 \newline Regular SimPoints analysis is then performed and checkpoints taken for the ten closest BBVs to each cluster. The checkpoints for a single cluster are simulated, and the variance of the set of resulting performance metrics is then plotted as a point on this figure. A box plot is added to depict the distribution of the variances that aren't outliers.](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
 
 ![A plot showing how variance of a set of super-sampled SimPoints increases as interval width decreases for the `zip` and `x264` benchmarks. It is still  lower than the variance of a set of 30 random samples collected from across the benchmark program a majority of the time. Shorter interval SimPoints with higher errors can still be useful in design space exploration as their error is consistent, making for fair comparisons between architecture configurations [@simpoint3].](./experiments/3_coremarkzip/plots/variance_clearer.svg)
@@ -629,52 +632,17 @@ We start by
 
 ![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a randomly sampled metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
 
+
+
+# Design-Space Exploration with Short SimPoints
+
+Having demonstrated error and variance properties of SimPoint sets that enable researchers to make trade-offs between computation time required to construct them and the accuracy of their estimates, we now turn to seeing how we can using them in design-space exploration experiments.
+
+We performed experiments on the `zip` binary from the CoreMark-PRO suite [@coremarkpro] so that we could reuse checkpoints we had already collected. Our experiments involved attempting to find optimal configurations and Pareto fronts given multiple variables to minimise (CPI, power, area) - we made use of McPat [@mcpat] to compute power and area statistics given a Gem5 microarchitecture configuration.
+
+Given we have multiple variables we want to minimise, and a mix of ordinal and discrete variables we can adjust (pipeline size, reorder buffer length and the size of the store and load queues), we chose to use HyperMapper [@hypermapper2] to power the exploration.
+
 ![A chart showing the](./experiments/6_hypermapper_zip/plots/hypermapper_energy.svg)
-
-# Design-space Exploration with Short SimPoints
-
-We perform experiments with the following scenario:
-
-```json
-{
-	"application_name": "simpoint",
-	"optimization_objectives": ["performance", "energy"],
-
-	"design_of_experiment": {
-		"doe_type": "random sampling",
-		"number_of_samples": 10
-	},
-	"optimization_iterations": 49,
-	"evaluations_per_optimization_iteration": 10,
-
-	"models": {
-		"model": "random_forest"
-	},
-
-	"input_parameters": {
-		"rob_size": {
-			"parameter_type": "ordinal",
-			"values": [16, 32, 64, 128, 256, 512]
-		},
-		"lq_size": {
-			"parameter_type": "ordinal",
-			"values": [4, 16, 64, 128, 256]
-		},
-		"sq_size": {
-			"parameter_type": "ordinal",
-			"values": [4, 16, 64, 128, 256]
-		},
-		"p_width": {
-			"parameter_type": "integer",
-			"values": [4, 12]
-		},
-		"interval": {
-			"parameter_type": "ordinal",
-			"values": [125000]
-		}
-	}
-}
-```
 
 # Conclusion
 
@@ -688,11 +656,11 @@ $k$-means clustering is not the only clustering method that can be used with Sim
 
 ## Future Work
 
-We have demonstrated how our new methods for BBV and checkpoint collection can save processing time. Better incorporation of our methods into simulators like Gem5 would improve usability for researchers. For instance, Gem5 could output
+We have demonstrated how our new methods for BBV and checkpoint collection can save processing time. Better incorporation of our methods into simulators like Gem5 would improve usability for researchers. For instance, Gem5 could calculate scaled vectors itself as it carries out a profiling simulation, rather than this needing to be an additional processing step.
 
-- Incorporating BBV generation into Gem5
+Another limitation in our work that could be improved in future is in the execution of two differently-sized truncated SimPoints simulataneously. Currently, this requires rerunning the truncated SimPoint twice, once for the shorter interval length and once for the longer, despite the fact the initial simulation of the longer truncated interval is identical to the execution of the smaller one. Extending Gem5 to emit performance metrics part-way through a simulation, at the point where the smaller truncated checkpoint would terminate, whilst allowing it to continue to completion for the larger, would reduce simulation time by avoiding costly result recomputation.
 
-- Could Gem5 output stats periodically rather than just at the end (combine collecting IPC, etc. for the same checkpoint at different intervals).
+In the future work for HyperMapper [@hypermapper2, Ch VI], they mention the possibility of developing a Bayesian optimiser that computes a prior distribution on each optimisation phase. Combined with a set of SimPoints of different sizes and the variance SimPoint theory described in [@simpoint-early-and-stats, Ch 4], information on the confidence of a SimPoint cluster's performance metrics could be fed back into HyperMapper to influence where it chooses to look next. This could lead the path to developing easier ways to assign error bars to SimPoint metric estimates.
 
 ## Final Thoughts
 
