@@ -41,7 +41,7 @@ variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_v
 	labs(x = "Interval Size (instructions)", y = "Variance of Cluster Point's IPC") +
 	theme_few(base_family="Latin Modern Roman", base_size=10) + scale_colour_few()
 
-ggsave("plots/variance_by_interval_ipc.svg", width=15, height=7, unit="cm")
+ggsave("plots/variance_by_interval_ipc.svg", width=15, height=8, unit="cm")
 
 # calculate weighted average
 selected <- (filter(data, index == 0) %>%

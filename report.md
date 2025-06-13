@@ -401,7 +401,13 @@ Bayesian optimisation is an approach to determine the minimal value of a functio
 
 ### HyperMapper
 
-HyperMapper [@hypermapper2] is one Bayesian optimisation tool. It supports
+HyperMapper [@hypermapper2] is one Bayesian optimisation tool. It supports optimising multiple continuous, discrete and ordinal parameters. Given a Python function to optimise and a scenario file containing the output parameters to be minimised, the number of design-of-experiment and optimisation runs to carry out and the models used. The process of optimisation is broken into two steps:
+
+1. An initial design-of-experiment phase where the space is randomly sampled to produce some initial data to train the optimiser on. HyperMapper offers a few algorithms for this, including simple random sampling alongside Latin hypercube sampling, where samples are chosen such that no two of them share the same value for an input parameter.
+
+2. A subsequent optimisation phase where a model is trained on the points sampled so far to predict where the Pareto front of the output parameters lies. Then points near that predicted Pareto front are fed back in to the model and used to train a new predictor for the next optimisation iteration.
+
+[@hypermapper2] gives results that show it finds Pareto fronts eight times more efficiently than existing methods, using less samples to produce a result with a low variance.
 
 # Generating Basic Block Vectors
 
@@ -612,15 +618,18 @@ Figure \hyperlink{methodology-diagram}{4.2} illustrates the complete process we 
 
 ## Results
 
-![A plot showing how variance of SimPoint clusters decreases with interval size.](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
+We start by 
 
-![A plot showing how variance of a set of super-sampled SimPoints increases as interval width increases, but is still dwarfed by the variance of a set of random samples collected from across the benchmark program. This demonstrates shorter interval SimPoints with higher errors can still be useful in design space exploration as their error is consistant, and can be accounted for in the optimisation process.](./experiments/3_coremarkzip/plots/variance_clearer.svg)
+![A plot showing how the variance of a ste of SimPoints is affected by its interval size, where the variance of a SimPoint cluster is approximated by calculating the variance of the performance metrics obtained by simulating the ten BBVs closest to that cluster's centre. We collected an array of BBVs that was 125000 instructions wide and then upscaled it ({@sec:super-sampling}) to produce BBVs for each other interval size.
+\newline Regular SimPoints analysis is then performed and checkpoints taken for the ten closest BBVs to each cluster. The checkpoints for a single cluster are simulated, and the variance of the set of resulting performance metrics is then plotted as a point on this figure. A box plot is added to depict the distribution of the variances that aren't outliers.](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
 
-![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are used for truncation. It shows how truncated benchmarks produce similar error rates to traditional SimPoints that take longer to gather.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
+![A plot showing how variance of a set of super-sampled SimPoints increases as interval width decreases for the `zip` and `x264` benchmarks. It is still  lower than the variance of a set of 30 random samples collected from across the benchmark program a majority of the time. Shorter interval SimPoints with higher errors can still be useful in design space exploration as their error is consistent, making for fair comparisons between architecture configurations [@simpoint3].](./experiments/3_coremarkzip/plots/variance_clearer.svg)
 
-![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a random sampling metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
+![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are used for truncation ({@sec:sub-sampling-using-checkpoint-truncation}). It shows how truncated benchmarks produce similar error rates to traditional SimPoints that take longer to gather.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
 
-![It's another plot!](./experiments/6_hypermapper_zip/plots/hypermapper_energy.svg)
+![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a randomly sampled metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
+
+![A chart showing the](./experiments/6_hypermapper_zip/plots/hypermapper_energy.svg)
 
 # Design-space Exploration with Short SimPoints
 
@@ -678,6 +687,8 @@ We didn't consider how different warm-up strategies might affect the accuracy of
 $k$-means clustering is not the only clustering method that can be used with SimPoint; another, multinomial clustering, can reduce simulation time by finding a smaller set of representative clusters than $k$-means does [@simpoint-clustering]. The justification we give for checkpoint truncation in {@sec:sub-sampling-using-checkpoint-truncation} relies on $k$-means clustering and does not directly translate to a multinomial clustering approach.
 
 ## Future Work
+
+We have demonstrated how our new methods for BBV and checkpoint collection can save processing time. Better incorporation of our methods into simulators like Gem5 would improve usability for researchers. For instance, Gem5 could output
 
 - Incorporating BBV generation into Gem5
 
