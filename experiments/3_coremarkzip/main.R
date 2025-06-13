@@ -126,6 +126,6 @@ variance_clear <- ggplot(variance_summary, aes(x = interval, y = ipc_var, colour
 	facet_grid(rows = vars(benchmark), scales = "free") +
 	scale_x_continuous(labels = scales::label_comma()) +
 	theme_few(base_family="Latin Modern Roman", base_size=10) + scale_colour_few() +
-	labs(x = "IPC Variance", y = "Interval Width (instructions)", colour = "Method")
+	labs(y = "IPC Variance", x = "Interval Width (instructions)", colour = "Method")
 ggsave("plots/variance_clearer.svg", width=15, height=8, unit="cm")
 
