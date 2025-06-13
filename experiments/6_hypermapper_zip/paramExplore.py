@@ -2,6 +2,10 @@
 
 THREADS=10
 
+curr = open("./curr", "w")
+curr.write("0")
+curr.close()
+
 import argparse
 import hypermapper
 import os
@@ -130,10 +134,12 @@ baseline = max(weights.keys())
 #   "lq_size": size of load queue
 #   "sq_size": size of store queue
 #   "p_width": pipeline width
+#   "int_regs", "float_regs", "vec_regs"
 # returned is None or a dict with the fields:
 #   "energy": energy used in nanojoules/instruction
 #   "performance": in cpi (cycles/instruction)
 #   "time": total user cpu time spent processing
+#   "area": chip area in mm2
 def run_gem5_mcpat(params):
 	# increase this process' oom score
 	oom_score = open("/proc/self/oom_score_adj", "w")
@@ -167,6 +173,9 @@ def run_gem5_mcpat(params):
 			"-P", prefix + "numROBEntries=" + str(params["rob_size"]),
 			"-P", prefix + "LQEntries=" + str(params["lq_size"]),
 			"-P", prefix + "SQEntries=" + str(params["sq_size"]),
+			"-P", prefix + "numPhysIntRegs=" + str(params["int_regs"]),
+			"-P", prefix + "numPhysFloatRegs=" + str(params["float_regs"]),
+			"-P", prefix + "numPhysVecRegs=" + str(params["vec_regs"]),
 		])
 		pipeline_stages = ["fetch", "decode", "rename", "dispatch", "issue", "wb", "squash", "commit"]
 		for stage in pipeline_stages:
@@ -268,6 +277,10 @@ def run_gem5_mcpat(params):
 			re.search(r"Runtime Dynamic = (\d+\.\d+) W", mcpat_report)
 				.group(1)
 		)
+		area = float(
+			re.search(r"Area = (\d+\.\d+) mm", mcpat_report)
+				.group(1)
+		)
 
 		# parse timing files to get total CPU user time spent processing this
 		time_gem5 = float(re.search(r"(\d+\.\d+)user",
@@ -277,7 +290,7 @@ def run_gem5_mcpat(params):
 
 		# energy is in nanojoules, scale simtime
 		energy = ((1000000000 * simtime) * (subthreshold_leakage + gate_leakage + runtime_dynamic)) / instructions
-		return {"energy": energy, "performance": cpi, "time": (time_gem5 + time_mcpat)}
+		return {"energy": energy, "performance": cpi, "time": (time_gem5 + time_mcpat), "area": area}
 
 # run the jobs for a single simpoint set and calculate the weighted average single-threaded
 # also calculates the baseline for this configuration too
@@ -287,12 +300,15 @@ def run_gem5_mcpat(params):
 #   "sq_size": size of store queue
 #   "p_width": pipeline width
 #   "interval": interval width to target
+#   "int_regs", "float_regs", "vec_regs"
 # returned is None or a dict with the fields:
 #   "energy": energy used in nanojoules/instruction
 #   "performance": in cpi (cycles/instruction)
 #   "time": total user cpu time spent processing
 #   "energy_baseline": energy value of the baseline
 #   "performance_baseline": performance ""
+#   "area": chip area in mm2
+#   "area_baseline": "" of the baseline
 def run_simpoint_set(params):
 	# run each checkpoint
 	checkpoint_dir = args.gem5_checkpoints / str(params["interval"])
@@ -301,6 +317,7 @@ def run_simpoint_set(params):
 		"energy": 0,
 		"performance": 0,
 		"time": 0,
+		"area": 0,
 	}
 	for cpt_id, weight in weights[params["interval"]].items():
 		subrun = {
@@ -310,6 +327,9 @@ def run_simpoint_set(params):
 			"lq_size": params["lq_size"],
 			"sq_size": params["sq_size"],
 			"p_width": params["p_width"],
+			"int_regs": params["int_regs"],
+			"float_regs": params["float_regs"],
+			"vec_regs": params["vec_regs"],
 		}
 
 		subresult = run_gem5_mcpat(subrun)
@@ -319,17 +339,20 @@ def run_simpoint_set(params):
 		result["energy"] += (subresult["energy"] * weight)
 		result["performance"] += (subresult["performance"] * weight)
 		result["time"] += subresult["time"]
+		result["area"] += (subresult["area"] * weight)
 
 	# do we need to run the baseline too?
 	if params["interval"] == baseline:
 		result["performance_baseline"] = result["performance"]
 		result["energy_baseline"] = result["energy"]
+		result["area_baseline"] = result["area"]
 	else:
 		baseline_params = dict(params)
 		baseline_params["interval"] = baseline
 		baseline_stats = run_simpoint_set(baseline_params)
 		result["performance_baseline"] = baseline_stats["performance"]
 		result["energy_baseline"] = baseline_stats["energy"]
+		result["area_baseline"] = baseline_stats["area"]
 
 	return result
 
@@ -340,7 +363,17 @@ def run_simpoint_set(params):
 #   "sq_size": (array) size of store queue
 #   "p_width": (array) pipeline width
 #   "interval": (array) interval width to use (this will always only be one value)
+#   "int_regs", "float_regs", "vec_regs": (array) number of physical registers of each type
 def run_parallel_gem5(base_params):
+	curr = open("./curr", "r")
+	curr_v = int(curr.read())
+	curr.close()
+	curr_v += 1
+	args.log.write("curr: " + str(curr_v) + "\n")
+	curr = open("./curr", "w")
+	curr.write(str(curr_v))
+	curr.close()
+
 	args.log.write(str(base_params) + "\n")
 	args.log.flush()
 
@@ -352,7 +385,10 @@ def run_parallel_gem5(base_params):
 		"lq_size": base_params["lq_size"][i],
 		"sq_size": base_params["sq_size"][i],
 		"p_width": base_params["p_width"][i],
-		"interval": base_params["interval"][i],
+		"interval": 16000000 if curr_v > 3 else 4000000,
+		"int_regs": base_params["int_regs"][i],
+		"float_regs": base_params["float_regs"][i],
+		"vec_regs": base_params["vec_regs"][i],
 	} for i in range(exp_count)]
 
 	# get ordering value for reconstruction of best-found so far in R
@@ -367,15 +403,17 @@ def run_parallel_gem5(base_params):
 	hypermapper_result = {
 		"energy": [],
 		"performance": [],
+		"area": [],
 	}
 	for i in range(len(result)):
-		args.data_out.write(f'{order},{experiments[i]["rob_size"]},{experiments[i]["lq_size"]},{experiments[i]["sq_size"]},{experiments[i]["p_width"]},{result[i]["energy"]},{result[i]["performance"]},{result[i]["time"]},{result[i]["energy_baseline"]},{result[i]["performance_baseline"]}\n')
+		args.data_out.write(f'{order},{experiments[i]["rob_size"]},{experiments[i]["lq_size"]},{experiments[i]["sq_size"]},{experiments[i]["p_width"]},{result[i]["energy"]},{result[i]["performance"]},{result[i]["time"]},{result[i]["energy_baseline"]},{result[i]["performance_baseline"]},{result[i]["area"]},{result[i]["area_baseline"]},{experiments[i]["int_regs"]},{experiments[i]["float_regs"]},{experiments[i]["vec_regs"]}\n')
 		hypermapper_result["energy"].append(result[i]["energy"])
 		hypermapper_result["performance"].append(result[i]["performance"])
+		hypermapper_result["area"].append(result[i]["area"])
 	args.data_out.flush()
 
 	return hypermapper_result
 
-args.data_out.write("order,rob_size,lq_size,sq_size,p_width,energy,performance,time,energy_baseline,performance_baseline\n")
+args.data_out.write("order,rob_size,lq_size,sq_size,p_width,energy,performance,time,energy_baseline,performance_baseline,area,area_baseline,int_regs,float_regs,vec_regs\n")
 args.data_out.flush()
 hypermapper.optimizer.optimize("scenario.json", run_parallel_gem5)

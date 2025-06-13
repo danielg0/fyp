@@ -1,12 +1,12 @@
 {
 	"application_name": "simpoint",
-	"optimization_objectives": ["performance", "energy"],
+	"optimization_objectives": ["performance", "energy", "area"],
 
 	"design_of_experiment": {
 		"doe_type": "random sampling",
 		"number_of_samples": 10
 	},
-	"optimization_iterations": 49,
+	"optimization_iterations": 5,
 	"evaluations_per_optimization_iteration": 10,
 
 	"models": {
@@ -34,9 +34,19 @@
 			"values": [4, 12]
 		},
 
-		"interval": {
-			"parameter_type": "ordinal",
-			"values": [125000]
+		"int_regs": {
+			"parameter_type": "integer",
+			"values": [49, 256]
+		},
+
+		"float_regs": {
+			"parameter_type": "integer",
+			"values": [49, 256]
+		},
+
+		"vec_regs": {
+			"parameter_type": "integer",
+			"values": [49, 256]
 		}
 	}
 }
