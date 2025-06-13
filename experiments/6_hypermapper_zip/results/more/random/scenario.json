@@ -1,0 +1,57 @@
+{
+	"application_name": "simpoint",
+	"optimization_objectives": ["performance", "energy", "area"],
+
+	"design_of_experiment": {
+		"doe_type": "random sampling",
+		"number_of_samples": 60
+	},
+	"optimization_iterations": 0,
+	"evaluations_per_optimization_iteration": 10,
+
+	"models": {
+		"model": "random_forest"
+	},
+
+	"input_parameters": {
+		"rob_size": {
+			"parameter_type": "ordinal",
+			"values": [16, 32, 64, 128, 256, 512]
+		},
+
+		"lq_size": {
+			"parameter_type": "ordinal",
+			"values": [4, 16, 64, 128, 256]
+		},
+
+		"sq_size": {
+			"parameter_type": "ordinal",
+			"values": [4, 16, 64, 128, 256]
+		},
+
+		"p_width": {
+			"parameter_type": "integer",
+			"values": [4, 12]
+		},
+
+		"interval": {
+			"parameter_type": "ordinal",
+			"values": [16000000]
+		},
+
+		"int_regs": {
+			"parameter_type": "integer",
+			"values": [49, 256]
+		},
+
+		"float_regs": {
+			"parameter_type": "integer",
+			"values": [49, 256]
+		},
+
+		"vec_regs": {
+			"parameter_type": "integer",
+			"values": [49, 256]
+		}
+	}
+}
