@@ -399,9 +399,9 @@ The effectiveness of the SimPoints approach in accurately estimating performance
 
 Bayesian optimisation is an approach to determine the minimal value of a function with few evaluations of the function. Modern Bayesian optimisers [@hypermapper2] can work with multiple discrete or continuous parameters with constraints on their values. This makes them ideal for working with hardware parameters, where we want to limit exploration to designs that are feasible. They also have the ability for a user to pass in a prior distribution, representing preexisting knowledge about the problem space and where the optimal solution may exist that can be used to drive where we evaluate the function next.
 
-\todo{discuss gem5tune paper Jacky mentioned}
+### HyperMapper
 
-### Hypermapper
+HyperMapper [@hypermapper2]
 
 # Generating Basic Block Vectors
 
@@ -671,11 +671,19 @@ We perform experiments with the following scenario:
 
 ## Threats to Validity
 
+We have evaluated our techniques on a small set of benchmarks with relatively short executions compared to those used in research, due to timing constraints. It is possible that on longer benchmarks or those with more complex phases, such as SPEC's [@speccpu2017] `gcc` benchmark, there may be long-term periodic behaviour that we don't simulate when we truncate a long checkpoint to a short interval length.
+
+We didn't consider how different warm-up strategies might affect the accuracy of our techniques. As microarchitecture state continues to become more complex with the use of tournament branch predictors and multiple layers of cache, the importance of thorough warming-up before collection of metrics begins will increase. Thorough warm-up is at odds with using short interval SimPoints - potential gains in simulation time may be lost if every checkpoint has to be preceeded by millions of instructions of warm-up.
+
+$k$-means clustering is not the only clustering method that can be used with SimPoint; another, multinomial clustering, can reduce simulation time by finding a smaller set of representative clusters than $k$-means does [@simpoint-clustering]. The justification we give for checkpoint truncation in {@sec:sub-sampling-using-checkpoint-truncation} relies on $k$-means clustering and does not directly translate to a multinomial clustering approach.
+
 ## Future Work
 
 - Incorporating BBV generation into Gem5
 
 - Could Gem5 output stats periodically rather than just at the end (combine collecting IPC, etc. for the same checkpoint at different intervals).
+
+## Final Thoughts
 
 <!--
 # Project Plan
