@@ -379,11 +379,13 @@ $$\textit{EarlySP} = \textnormal{BIC} \times \left(1 - {\textit{StartLastCluster
 
 Once a value of $k$ and a BBV clustering has been decided using this new BIC, an upper bound on how far through the binary we will to simulate is determined by picking an early sample from the cluster whose centre is latest in the binary. This early sample is picked by ordering all the BBVs for that latest cluster by Euclidean distance to the centre, then picking the BBV from the top 1% that occurs earliest. Then, when picking simulation points from other clusters, we limit our choice to BBVs that occur before this upper bound, otherwise following the standard SimPoint procedure in picking the closest BBV to the centre of each cluster.
 
-#### 99% SimPoint Coverage
+#### SimPoint Coverage
 
 The original SimPoint process considers the number of clusters picked, but not their relative sizes - its possible to end up with a cluster that accounts for a very small proportion of simulation time so long as it fits the BBVs well. This results in additional expensive simulations to gather metrics that do not have a great effect on the final weighted metric estimate. [@simpoint3] poses a solution to this issue - filter SimPoints to only those that represent a majority of execution.
 
-#### SimPoint Variance
+In this modified SimPoint process, we pick a target coverage for our final set of SimPoints to have (95%, 98% and 99% are typical). Then, given a set of clusters and their weights, obtained as normal, we repeatedly remove the cluster with the smallest weighting until that would reduce the total weighting of the remaining clusters below the target coverage.
+
+The resultant set of SimPoints is potentially smaller, in which case checkpoint collection and simulation time is reduced, without great increase in error. [@simpoint3] showed that across SPEC CPU 2000 [@speccpu2000], going from a set of SimPoints with 100% coverage (ie. no removed clusters) to 95% increased CPI error from 1.5% to 2.8% and reduced simulation time by 36%.
 
 #### Limitations
 
@@ -459,14 +461,14 @@ Dividing BBVs equally this way has a similar proportional effect on the $k$-mean
 
 ![An illustration of how scaling every BBV by a constant factor does not affect the stability of a $k$-means clustering of the space. Crosses represent the initial BBVs, the pluses represent the overlapping scaled BBVs and the green circle is the cluster found through $k$-means clustering. The BBV in red is the one slected as the SimPoint for that cluster.](./diagrams/clustering_scaling.drawio.svg){#fig:clustering_scaling}
 
-> Take an arbitrary $k$-means clustering of vectors $\mathbb{C}$ and assume that it is stable, as in {@fig:clustering_scaling}\medspace\ding{172}. Each cluster $C \in \mathbb{C}$ has a non-empty multiset of member vectors ${C = \{v_1, v_2, \ldots, v_{|C|}\}}$ each of cardinality $B$, the number of basic blocks in the program, and each cluster $C$ also has a centre $c = [c_1, c_2, \ldots, c_B]$, given by:
+> Take an arbitrary $k$-means clustering of vectors $\mathbb{C}$ and assume that it is stable, as in {@fig:clustering_scaling}\medspace\ding{172}. Each cluster $C \in \mathbb{C}$ is a non-empty multiset of member vectors ${C = \{v_1, v_2, \ldots, v_{|C|}\}}$, each vector having a cardinality of $B$, the number of basic blocks in the program. Each cluster $C$ has a centre $c = [c_1, c_2, \ldots, c_B]$, given by:
 > $$c = {v_1 + v_2 + \ldots + v_{|C|} \over {|C|} }$$
 > Let the closest vector in $C$ to the centre $c = [c_1, c_2, \ldots, c_B]$ be $v^\star = [i^\star_1, i^\star_2, \ldots, i^\star_B]$. There is no point $v \in C \setminus \{v^\star\}$ with components $v = [i_1, i_2, \ldots, i_B]$, such that:
 > $$\begin{aligned} |v - c| &< |v^\star - c| \quad \textnormal{(\ding{61})} \\
 \sqrt{(i^{\empty}_1 - c_1)^2 + (i_2 - c_2)^2 + \ldots + (i_B - c_B)^2} &< \sqrt{(i^\star_1 - c_1)^2 + (i^\star_2 - c_2)^2 + \ldots + (i^\star_B - c_B)^2} \end{aligned}$$
 > As the clustering is stable, each point is assigned to its closest centre. That is to say, for some point $v$ in a cluster $C \in \mathbb{C}$ with centre $c$, there is no other cluster $C' \in \mathbb{C} \setminus \{C\}$ with centre $c'$ such that:
 > $$|v - c'| < |v - c| \quad \textnormal{(\ding{81})}$$
-> Then, for arbitrary factor $f > 0$, scale every vector by $1 \over f$ to produce $f$ new vectors, like {@fig:clustering_scaling}\medspace\ding{173}, where each plus represents $f$ overlapping basic block vectors:
+> Now, for arbitrary factor $f > 0$, we will scale every vector by $1 \over f$ to produce $f$ new vectors, like {@fig:clustering_scaling}\medspace\ding{173}, where each plus represents $f$ overlapping basic block vectors:
 > $$\begin{aligned} w_{1.1}, w_{1.2}, \ldots, w_{1.f} &= {v_1 \over f} = \left[{i_0 \over f}, {i_1 \over f}, \ldots, {i_B \over f}\right] \\
 w_{2.1}, w_{2.2}, \ldots, w_{2.f} &= {v_2 \over f} \\
 &\ldots \end{aligned}$$
@@ -481,7 +483,7 @@ w_{2.1}, w_{2.2}, \ldots, w_{2.f} &= {v_2 \over f} \\
 \Rightarrow \quad d &= {v_1 + v_2 + \ldots + v_{|C|} \over f|C_i|} = {1 \over f}{v_1 + v_2 + \ldots + v_{|C|} \over |C_i|} = {c \over f}\\
 \end{aligned}$$
 >
-> Let $w^\star \in D$ be one member of the group of vectors scaled down from $v^\star \in C$, they are all equal, so $w^\star = {v^\star \over f} = [j^\star_1, j^\star_2, \ldots, j^\star_B]$. We will now show by contradiction that $w^\star$ is the vector that is closest to its assigned cluster's centre, $d$.
+> Let $w^\star \in D$ be one member of the group of vectors scaled down from the centre of $C$, $v^\star$; they are all equal, so $w^\star = {v^\star \over f} = [j^\star_1, j^\star_2, \ldots, j^\star_B]$. We will now show by contradiction that $w^\star$ is the vector that is closest to its assigned cluster's centre, $d$.
 >
 > $$\begin{aligned} \textnormal{Assume a vector }w \in C \setminus &\{w^\star\} \textnormal{ is closer to }d\textnormal{ than }w^\star\textnormal{:} \\
 |w - d| &< |w^\star - d| \\
@@ -533,6 +535,12 @@ There are several views in the literature on the need for warmup when using SimP
 In order to calculate the error of the IPC estimates our techniques produce, we will need to perform a full cycle-accurate simulation of the benchmark programs we test. Given the limited time available to complete this project, we have therefore chosen to evaluate our approach using one of the shorter benchmarks from the SPEC CPU 2017 benchmark suite [@speccpu2017], `x264`. We are executing `x264` on its test workload to further reduce execution time - this means we cannot compare our metrics to previous reseach, but does not affect the validity of our claims significantly as we are measuring our ability to identify performant configurations of a program, not to optimise the program to enable more performant configurations. To supplement `x264`, we have also chosen a benchmark from the CoreMark-PRO suite [@coremarkpro], `zip`. The CoreMark-PRO suite is considerably smaller than SPEC CPU, so we have chosen this benchmark as it is the largest in the suite - each other benchmark in CoreMark-PRO is too short to be profiled meaningfully. \todo{give numbers on this}.
 
 ### Random Checkpoints
+
+### Measuring SimPoint Cluster Variance
+
+In an approach based on [@simpoint-early-and-stats, Ch 4], we estimate the variance of computed SimPoint clusters by taking checkpoints of the ten closest BBVs to each cluster's centre, collecting simulated metric values for each of them and calculating the variance those metric values.
+
+This is an interesting value to evaluate as in design-space experiments, the error rate of a SimPoint is less important than the consistancy of that error between different microarchitectural configurations [@simpoint3]. This is due to the desire to make accurate comparisons between configurations to determine which are optimal.
 
 \newpage
 
@@ -589,6 +597,8 @@ Figure \hyperlink{methodology-diagram}{4.1} illustrates the complete process we 
 
 ![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a random sampling metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
 
+![It's another plot!](./experiments/6_hypermapper_zip/plots/hypermapper_energy.svg)
+
 # Design-space Exploration with Short SimPoints
 
 We perform experiments with the following scenario:
@@ -634,7 +644,11 @@ We perform experiments with the following scenario:
 }
 ```
 
-# Future Work
+# Conclusion
+
+## Threats to Validity
+
+## Future Work
 
 - Incorporating BBV generation into Gem5
 
