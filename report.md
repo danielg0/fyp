@@ -536,6 +536,29 @@ In order to calculate the error of the IPC estimates our techniques produce, we 
 
 ### Random Checkpoints
 
+```{=latex}
+\begin{multicols}{2}
+```
+
+To provide a point of comparison with traditional design-space exploration techniques, we also take a set of random samples to compare with our new super- and sub-sampled SimPoints, both in terms of error and variance, and then also in how effective they are for design exploration experiments. These are generated as follows, as illustrated in figure \hyperlink{random-sample}{4.1}:
+
+1. Having profiled the benchmark binary, we know its length in instructions. Use this to take $N$ checkpoints at regular intervals throughout the program $[c_1, c_2, \ldots, c_N]$. In our experiments, we set $N$ to be 50.
+
+2. Whenever we want to take a sample, we randomly pick 30 checkpoints, so that the central limit theorem {@sec:statistical-sampling} applies, and simulate each checkpoint for the target number of instructions. We then take the mean average of the performance metrics of interest from those 30 simulations.
+
+```{=latex}
+\columnbreak
+```
+
+<!-- manually label and increment figure counter as image too big for it to appear normally? -->
+![](./diagrams/random-sample.drawio.svg)
+\addtocounter{figure}{1}
+\hypertarget{random-sample}{Figure \thefigure: An illustration of how we take random samples from a benchmark binary.}
+
+```{=latex}
+\end{multicols}
+```
+
 ### Measuring SimPoint Cluster Variance
 
 In an approach based on [@simpoint-early-and-stats, Ch 4], we estimate the variance of computed SimPoint clusters by taking checkpoints of the ten closest BBVs to each cluster's centre, collecting simulated metric values for each of them and calculating the variance those metric values.
@@ -550,7 +573,7 @@ This is an interesting value to evaluate as in design-space experiments, the err
 \begin{multicols}{2}
 ```
 
-Figure \hyperlink{methodology-diagram}{4.1} illustrates the complete process we have carried out to gather SimPoints and evaluate our new scaling techniques. The stages of this process are labelled as follows:
+Figure \hyperlink{methodology-diagram}{4.2} illustrates the complete process we have carried out to gather SimPoints and evaluate our new scaling techniques. The stages of this process are labelled as follows:
 
 1. We take our benchmark binary and profile it using a functional model from Gem5 [@gem5], gathering an array of basic block vectors (@sec:basic-blocks) of length $N$, that record the number of instructions executed from each basic block in the program for each $N$-instruction long interval in the execution stream. $N$ is picked so that it is a factor of every interval we want to collect checkpoints for.
 
