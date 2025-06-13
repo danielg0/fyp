@@ -55,11 +55,11 @@ This thesis introduces a technique for combining short and long simulation inter
 
 - Investigating the trade-off between error and simulation time present when choosing a simulation interval's size.
 
-- Introducing interval sub-sampling and super-sampling techniques to efficiently generate new simulation intervals from existing profiling runs. These techniques result in a Y% decrease in CPU time required to pick simulation points.
+- Introducing interval sub-sampling and super-sampling techniques to efficiently generate new simulation intervals from existing profiling runs. These techniques result in a 96.7% decrease in CPU time required to simulate new interval runs.
 
 - Demonstrating the viability of combining multiple simulation interval sets of different sizes with modern ML techniques for parameter optimisation to efficiently find performant configurations.
 
-- Presenting an implementation that can find the Pareto front of a design-space exploration experiment on a benchmark program with X% less simulation time than traditional techniques.
+- Presenting a design-space exploration experiment that uses simulation interval sets of different sizes to find a power-minimising hardware configuration using 50% less simulation time than traditional techniques.
 
 The techniques this thesis introduces will contribute to more efficient use of simulation time in microarchitecture research with minimal opportunity cost by reusing expensive profiling and checkpointing data already collected. It empowers researchers to explore more avenues for performance gain by giving them the tools to quickly evaluate a suite of ideas before delving further into those that show promise.
 
@@ -107,13 +107,13 @@ We then demonstrate our implementation of this approach on a subset of the CoreM
 
 This thesis:
 
-- Introduces a method for scaling up profiling information used to generate SimPoints in order to reduce simulation time spent reprofiling programs with no loss in accuracy ({@sec:super-sampling}). In an experiment where SimPoints are generated for eight different simulation interval widths, this reduces overall execution time by X% ({@sec:results}).
+- Introduces a method for scaling up profiling information used to generate SimPoints in order to reduce simulation time spent reprofiling programs with no loss in accuracy ({@sec:super-sampling}). In an experiment where SimPoints are generated for eight different simulation interval widths, this reduces overall execution time by 96.7% ({@sec:results}).
 
 - Gives mathematical reasoning that truncating the simulation of selected SimPoints after $T$ instructions is equivalent to rerunning the SimPoint process on profiling data equally split into intervals $T$ instructions wide ({@sec:sub-sampling-using-checkpoint-truncation}). Subsequently, we experimentally demonstrate that these truncated checkpoints achieve similar error rates to repeated application of the standard SimPoint approach ({@sec:results}).
 
-- Presents a method for using a set of SimPoints of different interval lengths with an existing Bayesian Optimiser in order to find performant configurations in a design space exploration experiment using less simulation time than existing SimPoint techniques ({@sec:todo}).
+- Presents a method for using a set of SimPoints of different interval lengths with an existing Bayesian Optimiser in order to find performant configurations in a design space exploration experiment using less simulation time than existing SimPoint techniques ({@sec:design-space-exploration-with-short-simpoints}).
 
-- Evaluates our new design space exploration method on a CoreMark-PRO [@coremarkpro] benchmark ({@sec:todo}) demonstrating we find Pareto fronts X% faster than with a random search, concluding with a discussion on how future research could make use of the work we have done to make effective use of limited computation budgets ({@sec:todo}).
+- Evaluates our new design space exploration method on a CoreMark-PRO [@coremarkpro] benchmark demonstrating we find optimal configurations 50% faster than with a random search, concluding with a discussion on how future research could make use of the work we have done to make effective use of limited computation budgets ({@sec:future-work}).
 
 <!--\todo{Technique Overview \& Applications}-->
 
@@ -619,20 +619,30 @@ Figure \hyperlink{methodology-diagram}{4.2} illustrates the complete process we 
 
 ## Results
 
-We start by exploring how interval size affects the variance of a set of SimPoints. Low variance in a set of SimPoints is important as 
+We start by exploring how interval size affects the variance of a set of SimPoints. Low variance in a set of SimPoints is important as it means metrics calculated for different microarchitectural configurations express the same error inherent to that set of SimPoints, and makes comparisons between them possible.
 
-Moving on to consider the error rate of our truncated checkpoints
+{\*@fig:variance_by_interval} and {@fig:variance_clearer} show the results of this experiment, filtered to those clusters containing at least 10 BBVs to provide a fair comparison. There exists a tradeoff between interval size and variance due to how with shorter intervals, spikes in IPC aren't smoothed out by the rest of the interval's execution. However, this increase is much less than the typical variance of samples collected through random sampling, with random sampling's mean average variance of 0.133 being over 15x greater than the mean average of those collected through SimPoint super-sampling, 0.00745.
+
+Moving on to consider the error rate of our truncated checkpoints, {@fig:ipc-error-truncate} shows how for a set of truncated SimPoints we achieve similar error rates to those that are obtained through the standard SimPoint technique using super-sample BBV arrays. Assuming the prescence of the set of checkpoints to be truncated before the start of the experiment, as is our intended use case for truncation, this same error rate is achieved with a 96.7% reduction in simulation time versus traditional SimPoints and 96.3% versus random sampling on the `zip` benchmark, as shown in this table, where all units are seconds of CPU user time:
+
+| Technique | Benchmark | Profiling | Checkpointing | Simulation |
+|---|---|---|---|---|
+| Truncation | `zip`      | - | - | 370s |
+| Super-sampling | `zip`  | 5113s | 5463s | 512s |
+| Random | `zip`          | - | 9072s | 962s |
+| Truncation | `x264`     | - | - | 1083s |
+| Super-sampling | `x264` | 23930s | 41999s | 1003s |
+| Random | `x264`         | - | 33854s | 1028s |
 
 ![A plot showing how the variance of a set of SimPoints is affected by its interval size, where the variance of a SimPoint cluster is approximated by calculating the variance of the performance metrics obtained by simulating the ten BBVs closest to that cluster's centre. We collected an array of BBVs that was 125000 instructions wide and then upscaled it ({@sec:super-sampling}) to produce BBVs for each other interval size.
-\newline Regular SimPoints analysis is then performed and checkpoints taken for the ten closest BBVs to each cluster. The checkpoints for a single cluster are simulated, and the variance of the set of resulting performance metrics is then plotted as a point on this figure. A box plot is added to depict the distribution of the variances that aren't outliers.](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg)
+\newline Regular SimPoints analysis is then performed and checkpoints taken for the ten closest BBVs to each cluster. The checkpoints for a single cluster are simulated in order to measure IPC, and the variance of the IPC values collected is then plotted as a point on this figure. A box plot is added to depict the distribution of the variances that aren't outliers.](./experiments/3_coremarkzip/plots/variance_by_interval_ipc.svg){#fig:variance_by_interval}
 
-![A plot showing how variance of a set of super-sampled SimPoints increases as interval width decreases for the `zip` and `x264` benchmarks. It is still  lower than the variance of a set of 30 random samples collected from across the benchmark program a majority of the time. Shorter interval SimPoints with higher errors can still be useful in design space exploration as their error is consistent, making for fair comparisons between architecture configurations [@simpoint3].](./experiments/3_coremarkzip/plots/variance_clearer.svg)
+![A plot showing how variance of a set of super-sampled SimPoints increases as interval width decreases for the `zip` and `x264` benchmarks. It is still  lower than the variance of a set of 30 random samples collected from across the benchmark program a majority of the time. Shorter interval SimPoints with higher errors can still be useful in design space exploration as their error is consistent, making for fair comparisons between architecture configurations [@simpoint3].](./experiments/3_coremarkzip/plots/variance_clearer.svg){#fig:variance_clearer}
 
-![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are used for truncation ({@sec:sub-sampling-using-checkpoint-truncation}). It shows how truncated benchmarks produce similar error rates to traditional SimPoints that take longer to gather.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg)
-
-![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a randomly sampled metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead.](./experiments/3_coremarkzip/plots/error_pareto.svg)
+![A plot of estimated IPC error versus simulated interval width. The dotted vertical line marks the interval width whose SimPoint checkpoints are used for truncation ({@sec:sub-sampling-using-checkpoint-truncation}). It shows how truncated benchmarks produce similar error rates to traditional SimPoints that take longer to gather.](./experiments/3_coremarkzip/plots/ipc_error_by_interval.svg){#fig:ipc-error-truncate}
 
 
+![A diagram showing the trade-off between simulation time and accuracy for different metric estimation methods. A Pareto front is constructed for each method that highlights how no set of SimPoints collected through either super-sampling or checkpoint truncation could be improved by being replaced with a randomly sampled metric. This figure further reinforces the viability of truncating checkpoints given there is no clear error or simulation time advantage to using super-sampled/traditional SimPoint collection instead, in cases where checkpoint SimPoints does have to be considered.](./experiments/3_coremarkzip/plots/error_pareto.svg)
 
 # Design-Space Exploration with Short SimPoints
 
@@ -640,9 +650,11 @@ Having demonstrated error and variance properties of SimPoint sets that enable r
 
 We performed experiments on the `zip` binary from the CoreMark-PRO suite [@coremarkpro] so that we could reuse checkpoints we had already collected. Our experiments involved attempting to find optimal configurations and Pareto fronts given multiple variables to minimise (CPI, power, area) - we made use of McPat [@mcpat] to compute power and area statistics given a Gem5 microarchitecture configuration.
 
-Given we have multiple variables we want to minimise, and a mix of ordinal and discrete variables we can adjust (pipeline size, reorder buffer length and the size of the store and load queues), we chose to use HyperMapper [@hypermapper2] to power the exploration.
+Given we have multiple variables we want to minimise, and a mix of ordinal and discrete variables we can adjust (pipeline size, reorder buffer length and the size of the store and load queues), we chose to use HyperMapper [@hypermapper2] to power the experiment.
 
-![A chart showing the](./experiments/6_hypermapper_zip/plots/hypermapper_energy.svg)
+{\*@fig:hypermapper-energy} shows the results of a design-space exploration using a selection of SimPoint intervals, recalculated using a 16000000 instruction width interval SimPoint as a baseline to make our comparison fair. A SimPoint set with an interval size of 4000000 finds an optimal configuration an hour before our baseline sample does, and a random sample takes twice as long to find a similarly optimal configuration in the budgeted simulation time. We can observe a benefit to small interval size SimPoints as well, where due to its inaccuracy, it doesn't find a performant configuration fast, but it is able to cover more potential configurations in a shorter time, leading to it finding the most power-efficient configuration eventually through the advantage is has in sample count.
+
+![A chart showing the power used by the configuration that uses the least versus the amount of CPU user time used by HyperMapper in Gem5 simulations up to that point.](./experiments/6_hypermapper_zip/plots/hypermapper_energy.svg){#fig:hypermapper-energy}
 
 # Conclusion
 
@@ -661,8 +673,6 @@ We have demonstrated how our new methods for BBV and checkpoint collection can s
 Another limitation in our work that could be improved in future is in the execution of two differently-sized truncated SimPoints simulataneously. Currently, this requires rerunning the truncated SimPoint twice, once for the shorter interval length and once for the longer, despite the fact the initial simulation of the longer truncated interval is identical to the execution of the smaller one. Extending Gem5 to emit performance metrics part-way through a simulation, at the point where the smaller truncated checkpoint would terminate, whilst allowing it to continue to completion for the larger, would reduce simulation time by avoiding costly result recomputation.
 
 In the future work for HyperMapper [@hypermapper2, Ch VI], they mention the possibility of developing a Bayesian optimiser that computes a prior distribution on each optimisation phase. Combined with a set of SimPoints of different sizes and the variance SimPoint theory described in [@simpoint-early-and-stats, Ch 4], information on the confidence of a SimPoint cluster's performance metrics could be fed back into HyperMapper to influence where it chooses to look next. This could lead the path to developing easier ways to assign error bars to SimPoint metric estimates.
-
-## Final Thoughts
 
 <!--
 # Project Plan
