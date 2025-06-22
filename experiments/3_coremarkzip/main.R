@@ -3,8 +3,9 @@ library(scales)
 library(ggthemes)
 
 library(showtext)
-font.add("Latin Modern Roman", "/usr/share/fonts/OTF/lmroman10-regular.otf")
-showtext.auto()
+font_add("Latin Modern Roman", "/usr/share/fonts/OTF/lmroman10-regular.otf")
+font_add("Latin Modern Sans", "/usr/share/fonts/OTF/lmsans10-regular.otf")
+showtext_auto()
 
 pareto_front <- function(x, y) {
 	df = data.frame(x = x, y = y)
@@ -38,10 +39,13 @@ variance_by_interval <- ggplot(filter(variance, len == 10), aes(x = 0, y = ipc_v
 #		labels = c("1000", "2000", "", "4000", rep("", 3), "8000", rep("", 7), "16000", rep("", 15), "32000")) +
 	scale_x_continuous(breaks = c(), lim=c(-0.3, 0.3)) +
 	facet_grid(cols = vars(interval), labeller = labeller(interval = \(xs)label_comma()(map_vec(xs, as.integer)))) +
-	labs(x = "Interval Size (instructions)", y = "Variance of Cluster Point's IPC") +
-	theme_few(base_family="Latin Modern Roman", base_size=10) + scale_colour_few()
+	labs(x = "Interval Size (instructions)", y = "Cluster Estimated IPC Variance") +
+	scale_colour_few()
 
-ggsave("plots/variance_by_interval_ipc.svg", width=15, height=8, unit="cm")
+ggsave(plot = variance_by_interval + theme_few(base_family="Latin Modern Roman", base_size=10),
+       "plots/variance_by_interval_ipc.svg", width=15, height=8, unit="cm")
+ggsave(plot = variance_by_interval + theme_few(base_family="Latin Modern Sans", base_size=10) + theme(plot.background = element_rect(fill = "#f9f9f9"), strip.background = element_rect(fill = "#f9f9f9"), rect = element_rect(fill = "#f9f9f9")),
+       "plots/present_var_by_interval_ipc.svg", width=15, height=10, unit="cm")
 
 # calculate weighted average
 selected <- (filter(data, index == 0) %>%
@@ -84,14 +88,15 @@ error <- baseline %>% full_join(estimates, by = join_by(benchmark)) %>%
 	       cpi_percent_error = cpi_error / real_cpi,
 	       ipc_percent_error = ipc_error / real_ipc)
 
-ggplot(filter(error, source != "Random"), aes(x = interval, y = ipc_percent_error, colour = benchmark, linetype = source)) +
+ipc_error_by_interval <- ggplot(filter(error, source != "Random"), aes(x = interval, y = ipc_percent_error, colour = benchmark, linetype = source)) +
 	geom_vline(xintercept=4000000, linetype="dotted") +
 	geom_point() + geom_line() +
 	scale_y_continuous(lim = c(0, NA), labels = scales::label_percent()) +
 	scale_x_continuous(labels = scales::label_comma()) +
 	labs(x = "Interval Width (instructions)", y = "IPC Error", colour = "Benchmark", linetype="Method") +
-	theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom") + scale_colour_few()
-ggsave("plots/ipc_error_by_interval.svg", width=15, height=8, unit="cm")
+	 scale_colour_few()
+ggsave(plot = ipc_error_by_interval + theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom"), "plots/ipc_error_by_interval.svg", width=15, height=8, unit="cm")
+ggsave(plot = ipc_error_by_interval + theme_few(base_family="Latin Modern Sans", base_size=10) + theme(legend.position="bottom", plot.background = element_rect(fill = "#f9f9f9"), strip.background = element_rect(fill = "#f9f9f9"), rect = element_rect(fill = "#f9f9f9")), "plots/present_ipc_error_by_interval.svg", width=15, height=10, unit="cm")
 
 random_e <- filter(error, source == "Random")
 random_pf <- pareto_front(random_e$cputime, random_e$ipc_percent_error) 
@@ -100,7 +105,7 @@ super_pf <- pareto_front(super_e$cputime, super_e$ipc_percent_error)
 trunc_e <- filter(error, source == "Truncated")
 trunc_pf <- pareto_front(trunc_e$cputime, trunc_e$ipc_percent_error)
 
-ggplot(error, aes(x = cputime, y = ipc_percent_error, colour = source)) +
+pareto_error <- ggplot(error, aes(x = cputime, y = ipc_percent_error, colour = source)) +
        	geom_point() +
 	geom_step(data = random_pf, aes(x=x, y=y, colour="Random")) +
 	geom_step(data = super_pf, aes(x=x, y=y, colour="Super-sample")) +
@@ -108,8 +113,9 @@ ggplot(error, aes(x = cputime, y = ipc_percent_error, colour = source)) +
 	scale_y_continuous(lim = c(0, max(error$ipc_percent_error)), labels = scales::label_percent()) +
 	scale_x_continuous(lim = c(0, max(error$cputime)), labels = scales::label_timespan(), breaks=c(0, 120, 240, 360, 480, 600)) +
 	labs(x = "CPU User Time", y = "IPC Error", colour = "Method") +
-	theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom") + scale_colour_few()
-ggsave("plots/error_pareto.svg", width=15, height=15, unit="cm")
+	scale_colour_few()
+ggsave(plot=pareto_error + theme_few(base_family="Latin Modern Roman", base_size=10) + theme(legend.position="bottom"), "plots/error_pareto.svg", width=15, height=15, unit="cm")
+ggsave(plot=pareto_error + theme_few(base_family="Latin Modern Sans", base_size=10) + theme(plot.background = element_rect(fill = "#f9f9f9"), strip.background = element_rect(fill = "#f9f9f9"), rect = element_rect(fill = "#f9f9f9")), "plots/present_error_pareto.svg", width=14, height=10, unit="cm")
 
 
 # variance summarised plot with random samples too
@@ -125,7 +131,7 @@ variance_clear <- ggplot(variance_summary, aes(x = interval, y = ipc_var, colour
 	geom_line() +
 	facet_grid(rows = vars(benchmark), scales = "free") +
 	scale_x_continuous(labels = scales::label_comma()) +
-	theme_few(base_family="Latin Modern Roman", base_size=10) + scale_colour_few() +
+	scale_colour_few() +
 	labs(y = "IPC Variance", x = "Interval Width (instructions)", colour = "Method")
-ggsave("plots/variance_clearer.svg", width=15, height=8, unit="cm")
-
+ggsave(plot = variance_clear + theme_few(base_family="Latin Modern Roman", base_size=10), "plots/variance_clearer.svg", width=15, height=8, unit="cm")
+ggsave(plot = variance_clear + theme_few(base_family="Latin Modern Sans", base_size=10), "plots/present_variance_clearer.svg", width=15, height=10, unit="cm")
