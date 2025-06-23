@@ -134,4 +134,4 @@ variance_clear <- ggplot(variance_summary, aes(x = interval, y = ipc_var, colour
 	scale_colour_few() +
 	labs(y = "IPC Variance", x = "Interval Width (instructions)", colour = "Method")
 ggsave(plot = variance_clear + theme_few(base_family="Latin Modern Roman", base_size=10), "plots/variance_clearer.svg", width=15, height=8, unit="cm")
-ggsave(plot = variance_clear + theme_few(base_family="Latin Modern Sans", base_size=10), "plots/present_variance_clearer.svg", width=15, height=10, unit="cm")
+ggsave(plot = variance_clear + theme_few(base_family="Latin Modern Sans", base_size=10) + theme(plot.background = element_rect(fill = "#f9f9f9"), strip.background = element_rect(fill = "#f9f9f9"), rect = element_rect(fill = "#f9f9f9")), "plots/present_variance_clearer.svg", width=15, height=10, unit="cm")
